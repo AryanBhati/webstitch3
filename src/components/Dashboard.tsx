@@ -262,7 +262,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole, onLogout }) => {
             </h1>
             <p className="text-gray-600">
               {userRole === 'Travel Agent' 
-                ? 'Manage your bookings and discover new destinations'
+                ? 'Book cruises and hotels for your clients with our premium inventory'
                 : userRole === 'Basic Admin'
                 ? 'Oversee your team and manage regional operations'
                 : 'Control the entire CRM system and monitor performance'
@@ -335,6 +335,18 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole, onLogout }) => {
                 <p className="text-gray-600">
                   Try adjusting your search filters to find more results.
                 </p>
+                <button
+                  onClick={() => setSearchFilters({
+                    searchText: '',
+                    destination: destinations[0],
+                    cruiseLine: cruiseLines[0],
+                    shipType: shipTypes[0],
+                    month: months[0]
+                  })}
+                  className="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
+                >
+                  Clear Filters
+                </button>
               </div>
             </div>
           )}

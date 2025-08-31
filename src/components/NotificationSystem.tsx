@@ -83,15 +83,15 @@ const NotificationSystem: React.FC<NotificationSystemProps> = ({ userId }) => {
   };
 
   return (
-    <div className="relative">
+    <div className="relative z-40">
       {/* Notification Bell */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+        className="relative p-2 text-gray-600 hover:text-gray-800 hover:bg-white/20 rounded-lg transition-colors"
       >
         <Bell size={20} />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse shadow-lg">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -99,9 +99,9 @@ const NotificationSystem: React.FC<NotificationSystemProps> = ({ userId }) => {
 
       {/* Notification Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 top-12 w-80 bg-white rounded-lg shadow-2xl border border-gray-200 z-50 max-h-96 overflow-hidden">
+        <div className="absolute right-0 top-12 w-80 bg-white/95 backdrop-blur-md rounded-lg shadow-2xl border border-white/30 z-50 max-h-96 overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
+          <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white/50">
             <h3 className="font-semibold text-gray-800">Notifications</h3>
             <div className="flex items-center gap-2">
               {unreadCount > 0 && (
@@ -133,7 +133,7 @@ const NotificationSystem: React.FC<NotificationSystemProps> = ({ userId }) => {
                 <div
                   key={notification.id}
                   className={`p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors ${
-                    !notification.read ? 'bg-blue-50/50' : ''
+                    !notification.read ? 'bg-blue-50/70 border-l-4 border-l-blue-500' : ''
                   }`}
                 >
                   <div className="flex items-start gap-3">
@@ -201,7 +201,7 @@ const NotificationSystem: React.FC<NotificationSystemProps> = ({ userId }) => {
 
           {/* Footer */}
           {userNotifications.length > 0 && (
-            <div className="p-3 border-t border-gray-200 bg-gray-50">
+            <div className="p-3 border-t border-gray-200 bg-white/50">
               <button
                 onClick={() => {
                   setIsOpen(false);

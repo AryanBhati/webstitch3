@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AuthContext, useAuthState } from './hooks/useAuth';
 import Dashboard from './components/Dashboard';
 import Header from './components/Header';
 import HeroSection from './components/HeroSection';
@@ -11,8 +12,15 @@ import LoginPage from './components/LoginPage';
 import SignUpPage from './components/SignUpPage';
 
 function App() {
+  const authState = useAuthState();
   const [currentPage, setCurrentPage] = useState<'home' | 'login' | 'signup' | 'dashboard'>('home');
   const [userRole, setUserRole] = useState<string>('');
+
+  // Check if user is authenticated
+  if (authState.auth.isAuthenticated && currentPage !== 'dashboard') {
+    setCurrentPage('dashboard');
+    setUserRole(authState.auth.user?.role || '');
+  }
 
   // Handle navigation
   const handleNavigation = (page: 'home' | 'login' | 'signup' | 'dashboard') => {
@@ -28,33 +36,62 @@ function App() {
   // Handle logout
   const handleLogout = () => {
     if (window.confirm('Are you sure you want to logout?')) {
+      authState.logout();
       setUserRole('');
       setCurrentPage('home');
     }
   };
 
+  return (
+    <AuthContext.Provider value={authState}>
+      <AppContent 
+        currentPage={currentPage}
+        userRole={userRole}
+        onNavigate={handleNavigation}
+        onLoginSuccess={handleLoginSuccess}
+        onLogout={handleLogout}
+      />
+    </AuthContext.Provider>
+  );
+}
+
+interface AppContentProps {
+  currentPage: 'home' | 'login' | 'signup' | 'dashboard';
+  userRole: string;
+  onNavigate: (page: 'home' | 'login' | 'signup' | 'dashboard') => void;
+  onLoginSuccess: (role: string) => void;
+  onLogout: () => void;
+}
+
+const AppContent: React.FC<AppContentProps> = ({
+  currentPage,
+  userRole,
+  onNavigate,
+  onLoginSuccess,
+  onLogout
+}) => {
   // Render current page
   if (currentPage === 'login') {
-    return <LoginPage onNavigate={handleNavigation} onLoginSuccess={handleLoginSuccess} />;
+    return <LoginPage onNavigate={onNavigate} onLoginSuccess={onLoginSuccess} />;
   }
 
   if (currentPage === 'signup') {
-    return <SignUpPage onNavigate={handleNavigation} />;
+    return <SignUpPage onNavigate={onNavigate} />;
   }
 
   if (currentPage === 'dashboard') {
-    return <Dashboard userRole={userRole} onLogout={handleLogout} />;
+    return <Dashboard userRole={userRole} onLogout={onLogout} />;
   }
 
   return (
     <div className="min-h-screen">
       {/* Fixed Header */}
-      <Header onNavigate={handleNavigation} />
+      <Header onNavigate={onNavigate} />
 
       {/* Main Content */}
       <main>
         {/* Hero Section with Background Video */}
-        <HeroSection onNavigate={handleNavigation} />
+        <HeroSection onNavigate={onNavigate} />
 
         {/* Services Carousel */}
         <CarouselSection />
@@ -93,8 +130,8 @@ function App() {
               <ul className="space-y-2 text-sm text-gray-400">
                 <li><button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="hover:text-white transition-colors">About Us</button></li>
                 <li><button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="hover:text-white transition-colors">Destinations</button></li>
-                <li><button onClick={() => handleNavigation('login')} className="hover:text-white transition-colors">Cruise Lines</button></li>
-                <li><button onClick={() => handleNavigation('login')} className="hover:text-white transition-colors">Special Offers</button></li>
+                <li><button onClick={() => onNavigate('login')} className="hover:text-white transition-colors">Cruise Lines</button></li>
+                <li><button onClick={() => onNavigate('login')} className="hover:text-white transition-colors">Special Offers</button></li>
               </ul>
             </div>
 
@@ -102,10 +139,10 @@ function App() {
             <div>
               <h3 className="font-semibold mb-4">Services</h3>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li><button onClick={() => handleNavigation('login')} className="hover:text-white transition-colors">Luxury Cruises</button></li>
-                <li><button onClick={() => handleNavigation('login')} className="hover:text-white transition-colors">Premium Flights</button></li>
-                <li><button onClick={() => handleNavigation('login')} className="hover:text-white transition-colors">5-Star Hotels</button></li>
-                <li><button onClick={() => handleNavigation('login')} className="hover:text-white transition-colors">Holiday Packages</button></li>
+                <li><button onClick={() => onNavigate('login')} className="hover:text-white transition-colors">Luxury Cruises</button></li>
+                <li><button onClick={() => onNavigate('login')} className="hover:text-white transition-colors">Premium Flights</button></li>
+                <li><button onClick={() => onNavigate('login')} className="hover:text-white transition-colors">5-Star Hotels</button></li>
+                <li><button onClick={() => onNavigate('login')} className="hover:text-white transition-colors">Holiday Packages</button></li>
               </ul>
             </div>
 
@@ -134,6 +171,6 @@ function App() {
       </footer>
     </div>
   );
-}
+};
 
 export default App;

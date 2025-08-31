@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { X, Calendar, Users, Utensils, Bed, MapPin, Star, CheckCircle } from 'lucide-react';
+import { X, Calendar, Users, Utensils, Bed, MapPin, Star, CheckCircle, Download } from 'lucide-react';
 import { DatePicker } from 'antd';
-import ReviewSystem from './ReviewSystem';
+import PDFExport from './PDFExport';
 import { Hotel } from '../data/hotels';
 import dayjs, { Dayjs } from 'dayjs';
 
@@ -193,14 +193,6 @@ const HotelModal: React.FC<HotelModalProps> = ({ hotel, onClose, onBookingSucces
                 Details
               </button>
               <button
-                onClick={() => setCurrentStep('reviews')}
-                className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                  currentStep === 'reviews' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
-                }`}
-              >
-                Reviews
-              </button>
-              <button
                 onClick={() => setCurrentStep('selection')}
                 className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
                   currentStep === 'selection' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
@@ -210,6 +202,18 @@ const HotelModal: React.FC<HotelModalProps> = ({ hotel, onClose, onBookingSucces
               </button>
             </div>
           )}
+          
+          {/* PDF Export Button */}
+          <PDFExport 
+            data={hotel} 
+            type="hotel" 
+            bookingDetails={isBooked ? { 
+              id: 'HB001', 
+              bookingDate: new Date().toISOString(),
+              travelDate: bookingForm.checkInDate?.toISOString(),
+              totalAmount: calculateTotalPrice()
+            } : undefined} 
+          />
           
           <button
             onClick={onClose}
@@ -273,19 +277,6 @@ const HotelModal: React.FC<HotelModalProps> = ({ hotel, onClose, onBookingSucces
                   Book This Hotel
                 </button>
               </div>
-            </div>
-          )}
-
-          {/* Reviews Tab */}
-          {currentStep === 'reviews' && (
-            <div>
-              <ReviewSystem
-                entityType="hotel"
-                entityId={hotel.id}
-                entityName={hotel.name}
-                canReview={true}
-                currentUserId="current-user"
-              />
             </div>
           )}
 

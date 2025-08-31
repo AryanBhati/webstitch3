@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
-import { X, Calendar, Users, Utensils, Bed, Ship, Star } from 'lucide-react';
+import { X, Calendar, Users, Bed, Ship, Star, Download } from 'lucide-react';
 import ReviewSystem from './ReviewSystem';
+import PassengerDocumentUpload from './PassengerDocumentUpload';
+import PDFExport from './PDFExport';
 import { Cruise } from '../data/cruises';
+import type { Passenger } from '../types/booking';
 
 interface CruiseModalProps {
   cruise: Cruise;
@@ -23,10 +26,13 @@ interface BookingForm {
 
 const CruiseModal: React.FC<CruiseModalProps> = ({ cruise, onClose, onBookingSuccess, isBooked = false }) => {
   // Booking flow state
-  const [currentStep, setCurrentStep] = useState<'details' | 'reviews' | 'selection' | 'booking-details' | 'confirmation'>(isBooked ? 'confirmation' : 'details');
+  const [currentStep, setCurrentStep] = useState<'details' | 'selection' | 'booking-details' | 'documents' | 'confirmation'>(isBooked ? 'confirmation' : 'details');
   
   // Loading state
   const [loading, setLoading] = useState(false);
+  
+  // Passengers state
+  const [passengers, setPassengers] = useState<Passenger[]>([]);
   
   // Form state
   const [bookingForm, setBookingForm] = useState<BookingForm>({
@@ -40,8 +46,8 @@ const CruiseModal: React.FC<CruiseModalProps> = ({ cruise, onClose, onBookingSuc
     address: ''
   });
 
-  // Room type pricing multipliers
-  const roomPricing = {
+  // Cabin category pricing multipliers
+  const cabinPricing = {
     'Interior': 1.0,
     'Ocean View': 1.3,
     'Balcony': 1.6,
@@ -49,20 +55,19 @@ const CruiseModal: React.FC<CruiseModalProps> = ({ cruise, onClose, onBookingSuc
     'Penthouse': 3.0
   };
 
-  // Meal plan pricing
-  const mealPricing = {
-    'All Inclusive': 5000,
-    'Premium Plus': 3000,
-    'Basic Plus': 1500
+  // Calculate hold period based on cruise duration
+  const getHoldPeriod = () => {
+    if (cruise.duration <= 7) return 1; // 1 day for short cruises
+    if (cruise.duration <= 14) return 2; // 2 days for medium cruises
+    return 3; // 3 days for long cruises
   };
 
   // Calculate total price
   const calculateTotalPrice = () => {
     const basePrice = cruise.pricePerPerson;
-    const roomMultiplier = roomPricing[bookingForm.roomType as keyof typeof roomPricing] || 1.0;
-    const mealPrice = mealPricing[bookingForm.mealPlan as keyof typeof mealPricing] || 0;
+    const cabinMultiplier = cabinPricing[bookingForm.roomType as keyof typeof cabinPricing] || 1.0;
     
-    return (basePrice * roomMultiplier + mealPrice) * bookingForm.passengerCount;
+    return basePrice * cabinMultiplier * bookingForm.passengerCount;
   };
 
   // Format price in Indian Rupees
@@ -80,6 +85,36 @@ const CruiseModal: React.FC<CruiseModalProps> = ({ cruise, onClose, onBookingSuc
       ...prev,
       [field]: value
     }));
+    
+    // Initialize passengers when count changes
+    if (field === 'passengerCount') {
+      const newPassengers: Passenger[] = Array.from({ length: value as number }, (_, index) => ({
+        id: `passenger-${index + 1}`,
+        firstName: '',
+        lastName: '',
+        dateOfBirth: '',
+        nationality: 'Indian',
+        document: {
+          passportNumber: '',
+          frontImage: '',
+          backImage: '',
+          expiryDate: '',
+          issueDate: '',
+          dateOfBirth: '',
+          isEligible: false,
+          remainingValidity: 0,
+          renewalRequired: false
+        }
+      }));
+      setPassengers(newPassengers);
+    }
+  };
+  
+  // Handle passenger document update
+  const handleDocumentUpdate = (passengerId: string, document: any) => {
+    setPassengers(prev => prev.map(p => 
+      p.id === passengerId ? { ...p, document } : p
+    ));
   };
 
   // Handle next step
@@ -97,6 +132,13 @@ const CruiseModal: React.FC<CruiseModalProps> = ({ cruise, onClose, onBookingSuc
     // Validate form
     if (!bookingForm.name || !bookingForm.email || !bookingForm.phone || !bookingForm.address) {
       alert('Please fill in all required fields.');
+      return;
+    }
+    
+    // Validate all passengers have valid documents
+    const invalidPassengers = passengers.filter(p => !p.document.isEligible);
+    if (invalidPassengers.length > 0) {
+      alert(`${invalidPassengers.length} passenger(s) have invalid or expired passports. Please update documents.`);
       return;
     }
 
@@ -122,6 +164,11 @@ const CruiseModal: React.FC<CruiseModalProps> = ({ cruise, onClose, onBookingSuc
       
       // Show confirmation step
       setCurrentStep('confirmation');
+      
+      // Calculate hold expiry
+      const holdDays = getHoldPeriod();
+      const holdExpiry = new Date();
+      holdExpiry.setDate(holdExpiry.getDate() + holdDays);
       
       // Call success callback
       if (onBookingSuccess) {
@@ -172,14 +219,6 @@ const CruiseModal: React.FC<CruiseModalProps> = ({ cruise, onClose, onBookingSuc
                 Details
               </button>
               <button
-                onClick={() => setCurrentStep('reviews')}
-                className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                  currentStep === 'reviews' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
-                }`}
-              >
-                Reviews
-              </button>
-              <button
                 onClick={() => setCurrentStep('selection')}
                 className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
                   currentStep === 'selection' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
@@ -189,6 +228,19 @@ const CruiseModal: React.FC<CruiseModalProps> = ({ cruise, onClose, onBookingSuc
               </button>
             </div>
           )}
+          
+          {/* PDF Export Button */}
+          <PDFExport 
+            data={cruise} 
+            type="cruise" 
+            bookingDetails={isBooked ? { 
+              id: 'BK001', 
+              bookingDate: new Date().toISOString(),
+              travelDate: bookingForm.departureDate,
+              totalAmount: calculateTotalPrice(),
+              passengers
+            } : undefined} 
+          />
           
           <button
             onClick={onClose}
@@ -255,19 +307,6 @@ const CruiseModal: React.FC<CruiseModalProps> = ({ cruise, onClose, onBookingSuc
             </div>
           )}
 
-          {/* Reviews Tab */}
-          {currentStep === 'reviews' && (
-            <div>
-              <ReviewSystem
-                entityType="cruise"
-                entityId={cruise.id}
-                entityName={cruise.name}
-                canReview={true}
-                currentUserId="current-user"
-              />
-            </div>
-          )}
-
           {/* Booking Confirmation Step */}
           {currentStep === 'confirmation' && (
             <div className="text-center py-12">
@@ -295,12 +334,16 @@ const CruiseModal: React.FC<CruiseModalProps> = ({ cruise, onClose, onBookingSuc
                     <span>{new Date(bookingForm.departureDate).toLocaleDateString('en-IN')}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Room Type:</span>
+                    <span>Cabin Category:</span>
                     <span>{bookingForm.roomType}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Passengers:</span>
                     <span>{bookingForm.passengerCount}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Hold Period:</span>
+                    <span>{getHoldPeriod()} day(s)</span>
                   </div>
                   <hr className="my-3" />
                   <div className="flex justify-between text-lg font-bold text-green-600">
@@ -318,7 +361,7 @@ const CruiseModal: React.FC<CruiseModalProps> = ({ cruise, onClose, onBookingSuc
             </div>
           )}
           {/* Selection Step */}
-          {(currentStep === 'selection' || currentStep === 'booking-details') && !isBooked && (
+          {currentStep === 'selection' && !isBooked && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Left Column - Selection Options */}
               <div className="lg:col-span-2 space-y-6">
@@ -347,11 +390,11 @@ const CruiseModal: React.FC<CruiseModalProps> = ({ cruise, onClose, onBookingSuc
                   </select>
                 </div>
 
-                {/* Room Type */}
+                {/* Cabin Category */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                     <Bed size={16} />
-                    Room Type
+                    Cabin Category
                   </label>
                   <select
                     value={bookingForm.roomType}
@@ -360,26 +403,7 @@ const CruiseModal: React.FC<CruiseModalProps> = ({ cruise, onClose, onBookingSuc
                   >
                     {cruise.roomTypes.map((type) => (
                       <option key={type} value={type}>
-                        {type} - {Math.round((roomPricing[type as keyof typeof roomPricing] || 1) * 100 - 100)}% {(roomPricing[type as keyof typeof roomPricing] || 1) > 1 ? 'premium' : 'standard'}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Meal Plan */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                    <Utensils size={16} />
-                    Meal Plan
-                  </label>
-                  <select
-                    value={bookingForm.mealPlan}
-                    onChange={(e) => handleFormChange('mealPlan', e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    {cruise.mealPlans.map((plan) => (
-                      <option key={plan} value={plan}>
-                        {plan} - +{formatPrice(mealPricing[plan as keyof typeof mealPricing] || 0)}
+                        {type} - {Math.round((cabinPricing[type as keyof typeof cabinPricing] || 1) * 100 - 100)}% {(cabinPricing[type as keyof typeof cabinPricing] || 1) > 1 ? 'premium' : 'standard'}
                       </option>
                     ))}
                   </select>
@@ -419,16 +443,16 @@ const CruiseModal: React.FC<CruiseModalProps> = ({ cruise, onClose, onBookingSuc
                     <span>{new Date(bookingForm.departureDate).toLocaleDateString('en-IN')}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Room Type:</span>
+                    <span>Cabin Category:</span>
                     <span>{bookingForm.roomType}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Meal Plan:</span>
-                    <span>{bookingForm.mealPlan}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Passengers:</span>
                     <span>{bookingForm.passengerCount}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Hold Period:</span>
+                    <span>{getHoldPeriod()} day(s)</span>
                   </div>
                   
                   <hr className="my-3" />
@@ -529,12 +553,8 @@ const CruiseModal: React.FC<CruiseModalProps> = ({ cruise, onClose, onBookingSuc
                     <span>{new Date(bookingForm.departureDate).toLocaleDateString('en-IN')}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Room Type:</span>
+                    <span>Cabin Category:</span>
                     <span>{bookingForm.roomType}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Meal Plan:</span>
-                    <span>{bookingForm.mealPlan}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Passengers:</span>
@@ -550,11 +570,87 @@ const CruiseModal: React.FC<CruiseModalProps> = ({ cruise, onClose, onBookingSuc
                 </div>
 
                 <button
-                  onClick={handleBookNow}
-                  disabled={loading}
-                  className="w-full mt-6 bg-green-500 hover:bg-green-600 text-white py-3 px-4 rounded-lg transition-colors duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => setCurrentStep('documents')}
+                  className="w-full mt-6 bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-lg transition-colors duration-200 font-medium"
                 >
-                  {loading ? 'Processing...' : 'Book Now'}
+                  Next: Document Upload
+                </button>
+              </div>
+            </div>
+          )}
+          
+          {/* Document Upload Step */}
+          {currentStep === 'documents' && !isBooked && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-4 mb-6">
+                <button
+                  onClick={() => setCurrentStep('booking-details')}
+                  className="text-blue-500 hover:text-blue-600 font-medium"
+                >
+                  ← Back to Details
+                </button>
+                <h3 className="text-xl font-semibold text-gray-800">Passport Verification</h3>
+              </div>
+              
+              {/* Passenger Documents */}
+              {passengers.map((passenger, index) => (
+                <div key={passenger.id}>
+                  <h4 className="text-lg font-medium text-gray-800 mb-4">
+                    Passenger {index + 1}
+                  </h4>
+                  
+                  {/* Basic passenger info */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <input
+                      type="text"
+                      placeholder="First Name"
+                      value={passenger.firstName}
+                      onChange={(e) => {
+                        const updatedPassengers = [...passengers];
+                        updatedPassengers[index].firstName = e.target.value;
+                        setPassengers(updatedPassengers);
+                      }}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Last Name"
+                      value={passenger.lastName}
+                      onChange={(e) => {
+                        const updatedPassengers = [...passengers];
+                        updatedPassengers[index].lastName = e.target.value;
+                        setPassengers(updatedPassengers);
+                      }}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <input
+                      type="date"
+                      placeholder="Date of Birth"
+                      value={passenger.dateOfBirth}
+                      onChange={(e) => {
+                        const updatedPassengers = [...passengers];
+                        updatedPassengers[index].dateOfBirth = e.target.value;
+                        setPassengers(updatedPassengers);
+                      }}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  
+                  <PassengerDocumentUpload
+                    passenger={passenger}
+                    onDocumentUpdate={handleDocumentUpdate}
+                  />
+                </div>
+              ))}
+              
+              {/* Continue Button */}
+              <div className="text-center">
+                <button
+                  onClick={handleBookNow}
+                  disabled={loading || passengers.some(p => !p.document.isEligible)}
+                  className="bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white py-3 px-8 rounded-lg font-medium transition-colors"
+                >
+                  {loading ? 'Processing...' : 'Confirm Booking'}
                 </button>
               </div>
             </div>

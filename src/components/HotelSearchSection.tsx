@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, MapPin } from 'lucide-react';
+import { Search, MapPin, Filter } from 'lucide-react';
 import { cities, hotelChains, months } from '../data/hotels';
 
 interface HotelSearchFilters {
@@ -18,6 +18,11 @@ interface HotelSearchSectionProps {
 }
 
 const HotelSearchSection: React.FC<HotelSearchSectionProps> = ({ filters, onFiltersChange }) => {
+  // Handle search submission
+  const handleSearch = () => {
+    console.log('Searching hotels with filters:', filters);
+  };
+
   // Handle input changes
   const handleInputChange = (field: keyof HotelSearchFilters, value: string | number) => {
     onFiltersChange({
@@ -28,10 +33,19 @@ const HotelSearchSection: React.FC<HotelSearchSectionProps> = ({ filters, onFilt
 
   return (
     <div className="bg-white/20 backdrop-blur-md rounded-lg border border-white/30 shadow-lg p-6 mb-6">
-      <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-        <MapPin size={20} />
-        Search & Filter Hotels
-      </h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+          <Filter size={20} />
+          Search & Filter Hotels
+        </h2>
+        <button
+          onClick={handleSearch}
+          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+        >
+          <Search size={16} />
+          Search
+        </button>
+      </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
         {/* Text Search */}

@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { Eye, EyeOff, Mail, ArrowLeft, Anchor } from "lucide-react";
+import OTPModal from './OTPModal';
+import { useAuthState } from '../hooks/useAuth';
 
 interface LoginPageProps {
   onNavigate: (page: "home" | "login" | "signup") => void;
@@ -11,10 +13,14 @@ const LoginPage: React.FC<LoginPageProps> = ({
   onLoginSuccess,
 }) => {
   const [showPassword, setShowPassword] = useState(false);
+  const [showOTPModal, setShowOTPModal] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState('');
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
+  
+  const { login, sendOTP, verifyOTP } = useAuthState();
 
   // Demo credentials
   const demoCredentials = [
@@ -55,7 +61,7 @@ const LoginPage: React.FC<LoginPageProps> = ({
   };
 
   // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Basic validation
@@ -64,20 +70,51 @@ const LoginPage: React.FC<LoginPageProps> = ({
       return;
     }
 
-    // Find matching demo credential
-    const matchedCredential = demoCredentials.find(
-      (cred) =>
-        cred.email === formData.email && cred.password === formData.password
-    );
-
-    if (matchedCredential) {
-      // Call the login success handler with the user role
-      onLoginSuccess(matchedCredential.role);
+    // Check if user is an agent (requires OTP)
+    if (formData.email === 'agent_demo@example.com') {
+      // Send OTP for agents
+      const otpSent = await sendOTP(formData.email);
+      if (otpSent) {
+        setPendingEmail(formData.email);
+        setShowOTPModal(true);
+      } else {
+        alert('Failed to send OTP. Please try again.');
+      }
     } else {
-      alert(
-        "Invalid credentials. Please use the demo credentials provided or check your email and password."
-      );
+      // Direct login for admins
+      const success = await login({
+        email: formData.email,
+        password: formData.password
+      });
+      
+      if (success) {
+        const matchedCredential = demoCredentials.find(cred => cred.email === formData.email);
+        if (matchedCredential) {
+          onLoginSuccess(matchedCredential.role);
+        }
+      } else {
+        alert('Invalid credentials. Please use the demo credentials provided.');
+      }
     }
+  };
+  
+  const handleOTPVerify = async (otp: string): Promise<boolean> => {
+    const success = await login({
+      email: pendingEmail,
+      password: formData.password,
+      otp
+    });
+    
+    if (success) {
+      setShowOTPModal(false);
+      onLoginSuccess('Travel Agent');
+      return true;
+    }
+    return false;
+  };
+  
+  const handleOTPResend = async (): Promise<boolean> => {
+    return await sendOTP(pendingEmail);
   };
 
   return (
@@ -262,6 +299,15 @@ const LoginPage: React.FC<LoginPageProps> = ({
           </div>
         </div>
       </div>
+      
+      {/* OTP Modal */}
+      <OTPModal
+        isOpen={showOTPModal}
+        email={pendingEmail}
+        onVerify={handleOTPVerify}
+        onResend={handleOTPResend}
+        onClose={() => setShowOTPModal(false)}
+      />
     </div>
   );
 };

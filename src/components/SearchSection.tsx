@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search } from 'lucide-react';
+import { Search, Filter } from 'lucide-react';
 import { destinations, cruiseLines, shipTypes, months } from '../data/cruises';
 
 interface SearchFilters {
@@ -16,6 +16,12 @@ interface SearchSectionProps {
 }
 
 const SearchSection: React.FC<SearchSectionProps> = ({ filters, onFiltersChange }) => {
+  // Handle search submission
+  const handleSearch = () => {
+    // Trigger search - in real app this would call API
+    console.log('Searching with filters:', filters);
+  };
+
   // Handle input changes
   const handleInputChange = (field: keyof SearchFilters, value: string) => {
     onFiltersChange({
@@ -26,7 +32,19 @@ const SearchSection: React.FC<SearchSectionProps> = ({ filters, onFiltersChange 
 
   return (
     <div className="bg-white/20 backdrop-blur-md rounded-lg border border-white/30 shadow-lg p-6 mb-6">
-      <h2 className="text-lg font-semibold text-gray-800 mb-4">Search & Filter Cruises</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+          <Filter size={20} />
+          Search & Filter Cruises
+        </h2>
+        <button
+          onClick={handleSearch}
+          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+        >
+          <Search size={16} />
+          Search
+        </button>
+      </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Text Search */}

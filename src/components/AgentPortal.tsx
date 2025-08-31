@@ -12,9 +12,9 @@ import {
   FileText,
   BarChart3,
   CheckCircle,
-  Star
+  Star,
+  EyeOff
 } from 'lucide-react';
-import ReviewSystem from './ReviewSystem';
 import NotificationSystem from './NotificationSystem';
 
 interface AgentPortalProps {
@@ -131,7 +131,6 @@ const AgentPortal: React.FC<AgentPortalProps> = ({ userRole, onLogout, onBack })
           <div className="flex flex-wrap gap-2">
             {[
               { key: 'overview', label: 'Overview', icon: <BarChart3 size={18} /> },
-              { key: 'reviews', label: 'My Reviews', icon: <Star size={18} /> },
               { key: 'performance', label: 'Performance', icon: <TrendingUp size={18} /> }
             ].map(tab => (
               <button
@@ -189,10 +188,6 @@ const AgentPortal: React.FC<AgentPortalProps> = ({ userRole, onLogout, onBack })
                 <span className="text-gray-800 font-semibold">{agentData.role}</span>
               </div>
               <div className="flex justify-between items-center py-3 border-b border-gray-200">
-                <span className="text-gray-600 font-medium">Commission Rate:</span>
-                <span className="text-gray-800 font-semibold">{agentData.commissionRate}%</span>
-              </div>
-              <div className="flex justify-between items-center py-3 border-b border-gray-200">
                 <span className="text-gray-600 font-medium">Status:</span>
                 <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold">
                   {agentData.status}
@@ -205,40 +200,34 @@ const AgentPortal: React.FC<AgentPortalProps> = ({ userRole, onLogout, onBack })
             </div>
           </div>
 
-          {/* Commission Details Card - Right Panel */}
+          {/* Booking Statistics Card - Right Panel */}
           <div className="bg-white/20 backdrop-blur-md rounded-2xl border border-white/30 shadow-lg p-8">
-            <h3 className="text-xl font-bold text-gray-800 mb-6">Commission Details</h3>
-
-            <div className="space-y-6">
-              {/* Current Rate */}
-              <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
-                <div className="flex items-center gap-3 mb-2">
-                  <DollarSign className="text-blue-600" size={24} />
-                  <span className="text-gray-600 font-medium">Current Rate</span>
-                </div>
-                <div className="text-3xl font-bold text-blue-600">{agentData.commissionRate}%</div>
+            <h3 className="text-xl font-bold text-gray-800 mb-6">Booking Statistics</h3>
+            
+            {/* Commission visibility hidden for agents */}
+            <div className="bg-gray-50 rounded-xl p-6 border border-gray-200 mb-6">
+              <div className="flex items-center gap-3 mb-2">
+                <EyeOff className="text-gray-500" size={24} />
+                <span className="text-gray-600 font-medium">Commission Details</span>
               </div>
-
-              {/* Total Earned */}
-              <div className="bg-yellow-50 rounded-xl p-6 border border-yellow-200">
-                <div className="flex items-center gap-3 mb-2">
-                  <Award className="text-yellow-600" size={24} />
-                  <span className="text-gray-600 font-medium">Total Earned</span>
-                </div>
-                <div className="text-4xl font-bold text-yellow-600">
-                  {formatCurrency(agentData.totalEarned)}
-                </div>
+              <p className="text-gray-500 text-sm">Commission information is managed by your administrator</p>
+            </div>
+            
+            {/* Booking Performance */}
+            <div className="space-y-4">
+              <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                <div className="text-2xl font-bold text-blue-600">{agentData.totalBookings}</div>
+                <div className="text-sm text-gray-600">Total Bookings</div>
               </div>
-
-              {/* Average per Booking */}
-              <div className="bg-teal-50 rounded-xl p-6 border border-teal-200">
-                <div className="flex items-center gap-3 mb-2">
-                  <TrendingUp className="text-teal-600" size={24} />
-                  <span className="text-gray-600 font-medium">Average per Booking</span>
-                </div>
-                <div className="text-3xl font-bold text-teal-600">
-                  {formatCurrency(agentData.averagePerBooking)}
-                </div>
+              
+              <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+                <div className="text-2xl font-bold text-green-600">{agentData.confirmedBookings}</div>
+                <div className="text-sm text-gray-600">Confirmed Bookings</div>
+              </div>
+              
+              <div className="bg-purple-50 rounded-xl p-4 border border-purple-200">
+                <div className="text-2xl font-bold text-purple-600">{agentData.successRate}%</div>
+                <div className="text-sm text-gray-600">Success Rate</div>
               </div>
             </div>
           </div>
@@ -326,19 +315,6 @@ const AgentPortal: React.FC<AgentPortalProps> = ({ userRole, onLogout, onBack })
             </div>
           </div>
         </div>
-        )}
-
-        {/* Reviews Tab */}
-        {activeTab === 'reviews' && (
-          <div>
-            <ReviewSystem
-              entityType="agent"
-              entityId="ag1"
-              entityName="John Smith"
-              canReview={false}
-              currentUserId="ag1"
-            />
-          </div>
         )}
 
         {/* Performance Tab */}

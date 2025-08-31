@@ -12,6 +12,7 @@ import {
   Edit,
   Trash2,
   MessageSquare,
+  MessageCircle,
   CheckCircle,
   XCircle,
   Clock,
@@ -19,9 +20,11 @@ import {
   PieChart,
   User,
   LogOut,
-  Home
+  Home,
+  Filter,
+  Search
 } from 'lucide-react';
-import { Table, Modal, Form, Input, Select, Button, Card, Statistic, Progress, Tag, Rate } from 'antd';
+import { Table, Modal, Form, Input, Select, Button, Card, Statistic, Progress, Tag, Rate, DatePicker } from 'antd';
 import NotificationSystem from './NotificationSystem';
 import { useToast } from './ToastNotification';
 import { agents, complaints, offers } from '../data/admins';
@@ -52,6 +55,12 @@ const BasicAdminDashboard: React.FC<BasicAdminDashboardProps> = ({ userRole, onL
   const [showInventoryModal, setShowInventoryModal] = useState(false);
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [inventoryType, setInventoryType] = useState<'cruise' | 'hotel'>('cruise');
+  const [bookingFilters, setBookingFilters] = useState({
+    dateRange: null as any,
+    agentName: '',
+    companyName: '',
+    paymentStatus: 'All'
+  });
 
   // Mock current admin data
   const currentAdmin = {
@@ -104,6 +113,21 @@ const BasicAdminDashboard: React.FC<BasicAdminDashboardProps> = ({ userRole, onL
       'Offer Assigned',
       `Offer has been assigned to ${agentIds.length} agent(s) successfully.`
     );
+  };
+  
+  // Handle agent commission edit
+  const handleEditCommission = (agentId: string, newRate: number) => {
+    console.log('Updating commission rate for agent:', agentId, 'to:', newRate);
+    showSuccess(
+      'Commission Updated',
+      `Commission rate has been updated to ${newRate}% successfully.`
+    );
+  };
+  
+  // Handle chat with customer
+  const handleChatCustomer = (bookingId: string, customerName: string) => {
+    console.log('Opening chat with customer for booking:', bookingId);
+    alert(`Opening chat with ${customerName} for booking ${bookingId}`);
   };
 
   // Table columns for agents
@@ -164,6 +188,18 @@ const BasicAdminDashboard: React.FC<BasicAdminDashboardProps> = ({ userRole, onL
           <Button size="small" onClick={() => setSelectedAgent(record)}>
             View Details
           </Button>
+          <Button 
+            size="small" 
+            type="primary"
+            onClick={() => {
+              const newRate = prompt('Enter new commission rate (%)', record.performance.grade === 'A' ? '7' : '5');
+              if (newRate && !isNaN(Number(newRate))) {
+                handleEditCommission(record.id, Number(newRate));
+              }
+            }}
+          >
+            Edit Commission
+          </Button>
         </div>
       )
     }
@@ -209,6 +245,20 @@ const BasicAdminDashboard: React.FC<BasicAdminDashboardProps> = ({ userRole, onL
       render: (amount: number) => `₹${amount.toLocaleString('en-IN')}`
     },
     {
+      title: 'Payment Status',
+      dataIndex: 'paymentStatus',
+      key: 'paymentStatus',
+      render: (status: string) => (
+        <Tag color={
+          status === 'Paid' ? 'green' : 
+          status === 'Pending' ? 'orange' : 
+          status === 'Failed' ? 'red' : 'blue'
+        }>
+          {status}
+        </Tag>
+      )
+    },
+    {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
@@ -220,6 +270,20 @@ const BasicAdminDashboard: React.FC<BasicAdminDashboardProps> = ({ userRole, onL
         }>
           {status}
         </Tag>
+      )
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      render: (record: Booking) => (
+        <div className="flex gap-2">
+          <Button 
+            size="small" 
+            icon={<MessageCircle size={14} />}
+            onClick={() => handleChatCustomer(record.id, record.customerName)}
+            title="Chat with customer"
+          />
+        </div>
       )
     }
   ];
@@ -513,13 +577,65 @@ const BasicAdminDashboard: React.FC<BasicAdminDashboardProps> = ({ userRole, onL
             <div>
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-800">Booking Logs</h2>
-                <Button type="primary" icon={<Download />}>
-                  Export Data
-                </Button>
+                <div className="flex gap-2">
+                  <Button type="primary" icon={<Download />}>
+                    Export Data
+                  </Button>
+                </div>
               </div>
+              
+              {/* Booking Filters */}
+              <div className="bg-white/30 rounded-lg p-4 mb-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
+                    <DatePicker.RangePicker
+                      value={bookingFilters.dateRange}
+                      onChange={(dates) => setBookingFilters(prev => ({ ...prev, dateRange: dates }))}
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Agent Name</label>
+                    <Input
+                      placeholder="Filter by agent"
+                      value={bookingFilters.agentName}
+                      onChange={(e) => setBookingFilters(prev => ({ ...prev, agentName: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+                    <Input
+                      placeholder="Filter by company"
+                      value={bookingFilters.companyName}
+                      onChange={(e) => setBookingFilters(prev => ({ ...prev, companyName: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Payment Status</label>
+                    <Select
+                      value={bookingFilters.paymentStatus}
+                      onChange={(value) => setBookingFilters(prev => ({ ...prev, paymentStatus: value }))}
+                      className="w-full"
+                    >
+                      <Select.Option value="All">All Status</Select.Option>
+                      <Select.Option value="Paid">Paid</Select.Option>
+                      <Select.Option value="Pending">Pending</Select.Option>
+                      <Select.Option value="Failed">Failed</Select.Option>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+              
               <Table
                 columns={bookingColumns}
-                dataSource={myBookings}
+                dataSource={myBookings.filter(booking => {
+                  const matchesAgent = !bookingFilters.agentName || 
+                    booking.agentName.toLowerCase().includes(bookingFilters.agentName.toLowerCase());
+                  const matchesPayment = bookingFilters.paymentStatus === 'All' || 
+                    booking.paymentStatus === bookingFilters.paymentStatus;
+                  return matchesAgent && matchesPayment;
+                })}
                 rowKey="id"
                 className="bg-white/50 rounded-lg"
                 pagination={{ pageSize: 10 }}
