@@ -74,6 +74,7 @@ export const useAuthState = () => {
         // Session expired
         localStorage.removeItem('yorker_user');
         localStorage.removeItem('yorker_session_expiry');
+        alert('Your session has expired. Please login again.');
         setAuth(prev => ({ ...prev, isLoading: false }));
       }
     } else {
@@ -84,6 +85,7 @@ export const useAuthState = () => {
     const checkSession = setInterval(() => {
       const expiry = localStorage.getItem('yorker_session_expiry');
       if (expiry && Date.now() >= parseInt(expiry)) {
+        alert('Your session has expired. Please login again.');
         logout();
       }
     }, 60000); // Check every minute
@@ -91,6 +93,29 @@ export const useAuthState = () => {
     return () => clearInterval(checkSession);
   }, []);
 
+  // Session warning (5 minutes before expiry)
+  useEffect(() => {
+    if (auth.sessionExpiry) {
+      const warningTime = auth.sessionExpiry - (5 * 60 * 1000); // 5 minutes before
+      const timeUntilWarning = warningTime - Date.now();
+      
+      if (timeUntilWarning > 0) {
+        const warningTimer = setTimeout(() => {
+          if (window.confirm('Your session will expire in 5 minutes. Do you want to extend it?')) {
+            // Extend session by refreshing
+            const user = auth.user;
+            if (user) {
+              const newExpiry = Date.now() + (user.role === 'Travel Agent' ? 4 * 60 * 60 * 1000 : 8 * 60 * 60 * 1000);
+              localStorage.setItem('yorker_session_expiry', newExpiry.toString());
+              setAuth(prev => ({ ...prev, sessionExpiry: newExpiry }));
+            }
+          }
+        }, timeUntilWarning);
+        
+        return () => clearTimeout(warningTimer);
+      }
+    }
+  }, [auth.sessionExpiry, auth.user]);
   const login = async (credentials: LoginCredentials): Promise<boolean> => {
     try {
       const user = demoUsers[credentials.email];
@@ -102,6 +127,11 @@ export const useAuthState = () => {
       // For agents, require OTP verification
       if (user.role === 'Travel Agent' && !credentials.otp) {
         throw new Error('OTP required for agents');
+      }
+      
+      // For agents, validate OTP
+      if (user.role === 'Travel Agent' && credentials.otp && credentials.otp !== '123456') {
+        throw new Error('Invalid OTP');
       }
 
       // Validate demo passwords
@@ -155,6 +185,7 @@ export const useAuthState = () => {
   const sendOTP = async (email: string): Promise<boolean> => {
     // Simulate OTP sending
     console.log('Sending OTP to:', email);
+    // In production, this would call the actual OTP service
     return true;
   };
 

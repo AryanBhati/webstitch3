@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { X, Calendar, Users, Bed, Ship, Star, Download } from 'lucide-react';
-import ReviewSystem from './ReviewSystem';
 import PassengerDocumentUpload from './PassengerDocumentUpload';
 import PDFExport from './PDFExport';
 import { Cruise } from '../data/cruises';
@@ -16,7 +15,6 @@ interface CruiseModalProps {
 interface BookingForm {
   departureDate: string;
   roomType: string;
-  mealPlan: string;
   passengerCount: number;
   name: string;
   email: string;
@@ -38,7 +36,6 @@ const CruiseModal: React.FC<CruiseModalProps> = ({ cruise, onClose, onBookingSuc
   const [bookingForm, setBookingForm] = useState<BookingForm>({
     departureDate: cruise.departureDates[0],
     roomType: cruise.roomTypes[0],
-    mealPlan: cruise.mealPlans[0],
     passengerCount: 2,
     name: '',
     email: '',
@@ -276,6 +273,14 @@ const CruiseModal: React.FC<CruiseModalProps> = ({ cruise, onClose, onBookingSuc
                   <Star size={20} />
                   <span><strong>Ship Type:</strong> {cruise.shipType}</span>
                 </div>
+                <div className="flex items-center gap-2 text-gray-700">
+                  <span><strong>Hold Period:</strong> {getHoldPeriod()} day(s)</span>
+                </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-blue-800 text-sm">
+                    <strong>Rate:</strong> {formatPrice(cruise.pricePerPerson)} per person (base cabin)
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -290,6 +295,18 @@ const CruiseModal: React.FC<CruiseModalProps> = ({ cruise, onClose, onBookingSuc
                   <span key={index} className="text-sm bg-blue-50 text-blue-800 px-2 py-1 rounded">
                     {amenity}
                   </span>
+                ))}
+              </div>
+              
+              <h3 className="text-lg font-semibold mb-3 mt-4">Cabin Categories</h3>
+              <div className="space-y-2">
+                {cruise.roomTypes.map((roomType, index) => (
+                  <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                    <span className="text-sm font-medium">{roomType}</span>
+                    <span className="text-sm text-green-600 font-bold">
+                      {formatPrice(cruise.pricePerPerson * (cabinPricing[roomType as keyof typeof cabinPricing] || 1.0))}
+                    </span>
+                  </div>
                 ))}
               </div>
             </div>

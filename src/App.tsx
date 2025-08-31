@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AuthContext, useAuthState } from './hooks/useAuth';
+import RoleBasedRoute from './components/RoleBasedRoute';
 import Dashboard from './components/Dashboard';
 import Header from './components/Header';
 import HeroSection from './components/HeroSection';
@@ -80,7 +81,11 @@ const AppContent: React.FC<AppContentProps> = ({
   }
 
   if (currentPage === 'dashboard') {
-    return <Dashboard userRole={userRole} onLogout={onLogout} />;
+    return (
+      <RoleBasedRoute allowedRoles={['Travel Agent', 'Basic Admin', 'Super Admin']}>
+        <Dashboard userRole={userRole} onLogout={onLogout} />
+      </RoleBasedRoute>
+    );
   }
 
   return (

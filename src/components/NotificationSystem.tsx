@@ -83,7 +83,7 @@ const NotificationSystem: React.FC<NotificationSystemProps> = ({ userId }) => {
   };
 
   return (
-    <div className="relative z-40">
+    <div className="relative">
       {/* Notification Bell */}
       <button
         onClick={() => setIsOpen(!isOpen)}
@@ -99,7 +99,7 @@ const NotificationSystem: React.FC<NotificationSystemProps> = ({ userId }) => {
 
       {/* Notification Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 top-12 w-80 bg-white/95 backdrop-blur-md rounded-lg shadow-2xl border border-white/30 z-50 max-h-96 overflow-hidden">
+        <div className="absolute right-0 top-12 w-80 bg-white/95 backdrop-blur-md rounded-lg shadow-2xl border border-white/30 z-[60] max-h-96 overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white/50">
             <h3 className="font-semibold text-gray-800">Notifications</h3>

@@ -24,7 +24,7 @@ import {
   Filter,
   Search
 } from 'lucide-react';
-import { Table, Modal, Form, Input, Select, Button, Card, Statistic, Progress, Tag, Rate, DatePicker } from 'antd';
+import { Table, Modal, Form, Input, Select, Button, Card, Statistic, Progress, Tag, Rate, DatePicker, InputNumber } from 'antd';
 import NotificationSystem from './NotificationSystem';
 import { useToast } from './ToastNotification';
 import { agents, complaints, offers } from '../data/admins';
@@ -46,14 +46,17 @@ interface BasicAdminDashboardProps {
 
 const BasicAdminDashboard: React.FC<BasicAdminDashboardProps> = ({ userRole, onLogout, onBack }) => {
   // Toast notifications
-  const { showSuccess, showError, showWarning, ToastContainer } = useToast();
+  const { showSuccess, showError, showWarning, showInfo, ToastContainer } = useToast();
   
   // State management
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [showInventoryModal, setShowInventoryModal] = useState(false);
   const [showOfferModal, setShowOfferModal] = useState(false);
+  const [showAgentModal, setShowAgentModal] = useState(false);
+  const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
   const [inventoryType, setInventoryType] = useState<'cruise' | 'hotel'>('cruise');
   const [bookingFilters, setBookingFilters] = useState({
     dateRange: null as any,
@@ -95,6 +98,31 @@ const BasicAdminDashboard: React.FC<BasicAdminDashboardProps> = ({ userRole, onL
   const activeAgents = myAgents.filter(agent => agent.status === 'Active').length;
   const openComplaints = myComplaints.filter(complaint => complaint.status === 'Open').length;
 
+  // Handle agent CRUD operations
+  const handleCreateAgent = (agentData: any) => {
+    console.log('Creating new agent:', agentData);
+    showSuccess(
+      'Agent Created',
+      'New agent has been added to your team successfully.'
+    );
+    setShowAgentModal(false);
+  };
+
+  const handleEditAgent = (agent: Agent) => {
+    setEditingAgent(agent);
+    setShowAgentModal(true);
+  };
+
+  const handleDeleteAgent = (agentId: string, agentName: string) => {
+    if (window.confirm(`Are you sure you want to delete agent ${agentName}?`)) {
+      console.log('Deleting agent:', agentId);
+      showSuccess(
+        'Agent Deleted',
+        'Agent has been removed from your team successfully.'
+      );
+    }
+  };
+
   // Handle complaint resolution
   const handleResolveComplaint = (complaintId: string, resolution: string) => {
     console.log('Resolving complaint:', complaintId, resolution);
@@ -103,6 +131,7 @@ const BasicAdminDashboard: React.FC<BasicAdminDashboardProps> = ({ userRole, onL
       'Complaint Resolved',
       'The complaint has been marked as resolved successfully.'
     );
+    setSelectedComplaint(null);
   };
 
   // Handle offer assignment
@@ -127,7 +156,32 @@ const BasicAdminDashboard: React.FC<BasicAdminDashboardProps> = ({ userRole, onL
   // Handle chat with customer
   const handleChatCustomer = (bookingId: string, customerName: string) => {
     console.log('Opening chat with customer for booking:', bookingId);
-    alert(`Opening chat with ${customerName} for booking ${bookingId}`);
+    showInfo(
+      'Chat System',
+      `Opening chat with ${customerName} for booking ${bookingId}. Chat functionality would be implemented here.`
+    );
+  };
+
+  // Handle inventory management
+  const handleInventoryAction = (action: string, itemId?: string) => {
+    switch (action) {
+      case 'add':
+        setShowInventoryModal(true);
+        break;
+      case 'edit':
+        showInfo('Edit Item', `Editing ${inventoryType} item: ${itemId}`);
+        break;
+      case 'delete':
+        if (window.confirm(`Are you sure you want to delete this ${inventoryType}?`)) {
+          showSuccess('Item Deleted', `${inventoryType} has been removed from inventory`);
+        }
+        break;
+    }
+  };
+
+  // Handle booking details view
+  const handleViewBookingDetails = (booking: Booking) => {
+    setSelectedBooking(booking);
   };
 
   // Table columns for agents
@@ -199,6 +253,19 @@ const BasicAdminDashboard: React.FC<BasicAdminDashboardProps> = ({ userRole, onL
             }}
           >
             Edit Commission
+          </Button>
+          <Button 
+            size="small" 
+            onClick={() => handleEditAgent(record)}
+          >
+            Edit
+          </Button>
+          <Button 
+            size="small" 
+            danger
+            onClick={() => handleDeleteAgent(record.id, record.name)}
+          >
+            Delete
           </Button>
         </div>
       )
@@ -279,6 +346,13 @@ const BasicAdminDashboard: React.FC<BasicAdminDashboardProps> = ({ userRole, onL
         <div className="flex gap-2">
           <Button 
             size="small" 
+            onClick={() => handleViewBookingDetails(record)}
+            title="View booking details"
+          >
+            View
+          </Button>
+          <Button 
+            size="small" 
             icon={<MessageCircle size={14} />}
             onClick={() => handleChatCustomer(record.id, record.customerName)}
             title="Chat with customer"
@@ -338,9 +412,25 @@ const BasicAdminDashboard: React.FC<BasicAdminDashboardProps> = ({ userRole, onL
       title: 'Actions',
       key: 'actions',
       render: (record: Complaint) => (
-        <Button size="small" onClick={() => setSelectedComplaint(record)}>
-          {record.status === 'Open' ? 'Resolve' : 'View'}
-        </Button>
+        <div className="flex gap-2">
+          <Button size="small" onClick={() => setSelectedComplaint(record)}>
+            {record.status === 'Open' ? 'Resolve' : 'View'}
+          </Button>
+          {record.status === 'Open' && (
+            <Button 
+              size="small" 
+              type="primary"
+              onClick={() => {
+                const resolution = prompt('Enter resolution details:');
+                if (resolution) {
+                  handleResolveComplaint(record.id, resolution);
+                }
+              }}
+            >
+              Quick Resolve
+            </Button>
+          )}
+        </div>
       )
     }
   ];
@@ -558,9 +648,21 @@ const BasicAdminDashboard: React.FC<BasicAdminDashboardProps> = ({ userRole, onL
             <div>
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-800">My Agents</h2>
-                <Button type="primary" icon={<Download />}>
-                  Export Report
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    type="primary" 
+                    icon={<Plus />}
+                    onClick={() => {
+                      setEditingAgent(null);
+                      setShowAgentModal(true);
+                    }}
+                  >
+                    Add Agent
+                  </Button>
+                  <Button type="default" icon={<Download />}>
+                    Export Report
+                  </Button>
+                </div>
               </div>
               <Table
                 columns={agentColumns}
@@ -669,13 +771,23 @@ const BasicAdminDashboard: React.FC<BasicAdminDashboardProps> = ({ userRole, onL
             <div>
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-800">Inventory Management</h2>
-                <Button 
-                  type="primary" 
-                  icon={<Plus />}
-                  onClick={() => setShowInventoryModal(true)}
-                >
-                  Add New Item
-                </Button>
+                <div className="flex gap-2">
+                  <Select
+                    value={inventoryType}
+                    onChange={setInventoryType}
+                    className="w-32"
+                  >
+                    <Select.Option value="cruise">Cruises</Select.Option>
+                    <Select.Option value="hotel">Hotels</Select.Option>
+                  </Select>
+                  <Button 
+                    type="primary" 
+                    icon={<Plus />}
+                    onClick={() => handleInventoryAction('add')}
+                  >
+                    Add {inventoryType === 'cruise' ? 'Cruise' : 'Hotel'}
+                  </Button>
+                </div>
               </div>
               
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -689,8 +801,17 @@ const BasicAdminDashboard: React.FC<BasicAdminDashboardProps> = ({ userRole, onL
                           <div className="text-sm text-gray-600">{cruise.from} → {cruise.to}</div>
                         </div>
                         <div className="flex gap-2">
-                          <Button size="small" icon={<Edit />} />
-                          <Button size="small" icon={<Trash2 />} danger />
+                          <Button 
+                            size="small" 
+                            icon={<Edit />}
+                            onClick={() => handleInventoryAction('edit', cruise.id)}
+                          />
+                          <Button 
+                            size="small" 
+                            icon={<Trash2 />} 
+                            danger
+                            onClick={() => handleInventoryAction('delete', cruise.id)}
+                          />
                         </div>
                       </div>
                     ))}
@@ -707,8 +828,17 @@ const BasicAdminDashboard: React.FC<BasicAdminDashboardProps> = ({ userRole, onL
                           <div className="text-sm text-gray-600">{hotel.location}</div>
                         </div>
                         <div className="flex gap-2">
-                          <Button size="small" icon={<Edit />} />
-                          <Button size="small" icon={<Trash2 />} danger />
+                          <Button 
+                            size="small" 
+                            icon={<Edit />}
+                            onClick={() => handleInventoryAction('edit', hotel.id)}
+                          />
+                          <Button 
+                            size="small" 
+                            icon={<Trash2 />} 
+                            danger
+                            onClick={() => handleInventoryAction('delete', hotel.id)}
+                          />
                         </div>
                       </div>
                     ))}
@@ -767,6 +897,118 @@ const BasicAdminDashboard: React.FC<BasicAdminDashboardProps> = ({ userRole, onL
           )}
         </div>
       </div>
+
+      {/* Agent CRUD Modal */}
+      <Modal
+        title={editingAgent ? "Edit Agent" : "Add New Agent"}
+        open={showAgentModal}
+        onCancel={() => {
+          setShowAgentModal(false);
+          setEditingAgent(null);
+        }}
+        footer={null}
+        width={600}
+      >
+        <Form
+          layout="vertical"
+          initialValues={editingAgent || {}}
+          onFinish={handleCreateAgent}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Form.Item label="Full Name" name="name" required>
+              <Input placeholder="Enter agent name" />
+            </Form.Item>
+            <Form.Item label="Email" name="email" required>
+              <Input type="email" placeholder="Enter email address" />
+            </Form.Item>
+            <Form.Item label="Phone" name="phone" required>
+              <Input placeholder="Enter phone number" />
+            </Form.Item>
+            <Form.Item label="Region" name="region" required>
+              <Select placeholder="Select region">
+                <Select.Option value="Delhi">Delhi</Select.Option>
+                <Select.Option value="Punjab">Punjab</Select.Option>
+                <Select.Option value="Haryana">Haryana</Select.Option>
+              </Select>
+            </Form.Item>
+          </div>
+          <Form.Item label="Address" name="address">
+            <Input.TextArea rows={3} placeholder="Enter complete address" />
+          </Form.Item>
+          <div className="flex justify-end gap-2">
+            <Button onClick={() => setShowAgentModal(false)}>Cancel</Button>
+            <Button type="primary" htmlType="submit">
+              {editingAgent ? 'Update Agent' : 'Create Agent'}
+            </Button>
+          </div>
+        </Form>
+      </Modal>
+
+      {/* Booking Details Modal */}
+      <Modal
+        title="Booking Details"
+        open={!!selectedBooking}
+        onCancel={() => setSelectedBooking(null)}
+        footer={null}
+        width={700}
+      >
+        {selectedBooking && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Booking ID</label>
+                <p className="font-mono text-gray-900">{selectedBooking.id}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Service Type</label>
+                <Tag color={selectedBooking.type === 'Cruise' ? 'blue' : 'purple'}>
+                  {selectedBooking.type}
+                </Tag>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Customer</label>
+                <p className="text-gray-900">{selectedBooking.customerName}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Agent</label>
+                <p className="text-gray-900">{selectedBooking.agentName}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Total Amount</label>
+                <p className="text-green-600 font-bold">₹{selectedBooking.totalAmount.toLocaleString('en-IN')}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Commission</label>
+                <p className="text-purple-600 font-bold">₹{selectedBooking.commissionAmount.toLocaleString('en-IN')}</p>
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Service Details</label>
+              <p className="text-gray-900">{selectedBooking.itemName}</p>
+            </div>
+            
+            {selectedBooking.specialRequests && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Special Requests</label>
+                <p className="text-gray-900">{selectedBooking.specialRequests}</p>
+              </div>
+            )}
+            
+            <div className="flex justify-end gap-2 pt-4 border-t">
+              <Button 
+                icon={<MessageCircle size={16} />}
+                onClick={() => handleChatCustomer(selectedBooking.id, selectedBooking.customerName)}
+              >
+                Chat Customer
+              </Button>
+              <Button type="primary">
+                Generate Invoice
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* Agent Details Modal */}
       <Modal
@@ -829,6 +1071,18 @@ const BasicAdminDashboard: React.FC<BasicAdminDashboardProps> = ({ userRole, onL
                 />
               </Card>
             </div>
+            
+            <div className="flex justify-end gap-2 pt-4 border-t">
+              <Button onClick={() => handleEditAgent(selectedAgent)}>
+                Edit Agent
+              </Button>
+              <Button 
+                danger
+                onClick={() => handleDeleteAgent(selectedAgent.id, selectedAgent.name)}
+              >
+                Delete Agent
+              </Button>
+            </div>
           </div>
         )}
       </Modal>
@@ -838,44 +1092,212 @@ const BasicAdminDashboard: React.FC<BasicAdminDashboardProps> = ({ userRole, onL
         title="Resolve Complaint"
         open={!!selectedComplaint}
         onCancel={() => setSelectedComplaint(null)}
-        onOk={() => {
-          if (selectedComplaint) {
-            handleResolveComplaint(selectedComplaint.id, "Issue resolved by admin");
-            setSelectedComplaint(null);
-          }
-        }}
+        footer={null}
       >
         {selectedComplaint && (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Customer</label>
-              <p className="text-gray-900">{selectedComplaint.customerName}</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
-              <p className="text-gray-900">{selectedComplaint.subject}</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-              <p className="text-gray-900">{selectedComplaint.description}</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-              <Tag color={
-                selectedComplaint.priority === 'Critical' ? 'red' : 
-                selectedComplaint.priority === 'High' ? 'orange' : 'blue'
-              }>
-                {selectedComplaint.priority}
-              </Tag>
-            </div>
-            {selectedComplaint.status !== 'Open' && (
+          <Form
+            layout="vertical"
+            onFinish={(values) => {
+              handleResolveComplaint(selectedComplaint.id, values.resolution);
+            }}
+          >
+            <div className="space-y-4 mb-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Resolution</label>
-                <p className="text-gray-900">{selectedComplaint.resolution || 'No resolution provided'}</p>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Customer</label>
+                <p className="text-gray-900">{selectedComplaint.customerName}</p>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                <p className="text-gray-900">{selectedComplaint.subject}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <p className="text-gray-900">{selectedComplaint.description}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                <Tag color={
+                  selectedComplaint.priority === 'Critical' ? 'red' : 
+                  selectedComplaint.priority === 'High' ? 'orange' : 'blue'
+                }>
+                  {selectedComplaint.priority}
+                </Tag>
+              </div>
+              {selectedComplaint.status !== 'Open' && selectedComplaint.resolution && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Previous Resolution</label>
+                  <p className="text-gray-900">{selectedComplaint.resolution}</p>
+                </div>
+              )}
+            </div>
+            
+            {selectedComplaint.status === 'Open' && (
+              <Form.Item 
+                label="Resolution Details" 
+                name="resolution" 
+                required
+                rules={[{ required: true, message: 'Please provide resolution details' }]}
+              >
+                <Input.TextArea 
+                  rows={4} 
+                  placeholder="Enter detailed resolution..."
+                />
+              </Form.Item>
             )}
-          </div>
+            
+            <div className="flex justify-end gap-2">
+              <Button onClick={() => setSelectedComplaint(null)}>
+                Close
+              </Button>
+              {selectedComplaint.status === 'Open' && (
+                <Button type="primary" htmlType="submit">
+                  Resolve Complaint
+                </Button>
+              )}
+            </div>
+          </Form>
         )}
+      </Modal>
+
+      {/* Inventory Management Modal */}
+      <Modal
+        title={`Add New ${inventoryType === 'cruise' ? 'Cruise' : 'Hotel'}`}
+        open={showInventoryModal}
+        onCancel={() => setShowInventoryModal(false)}
+        footer={null}
+        width={800}
+      >
+        <Form layout="vertical" onFinish={(values) => {
+          console.log('Adding new inventory item:', values);
+          showSuccess(
+            'Item Added',
+            `New ${inventoryType} has been added to inventory successfully.`
+          );
+          setShowInventoryModal(false);
+        }}>
+          {inventoryType === 'cruise' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Form.Item label="Cruise Name" name="name" required>
+                <Input placeholder="Enter cruise name" />
+              </Form.Item>
+              <Form.Item label="Cruise Line" name="cruiseLine" required>
+                <Select placeholder="Select cruise line">
+                  <Select.Option value="Royal Caribbean">Royal Caribbean</Select.Option>
+                  <Select.Option value="Celebrity">Celebrity Cruises</Select.Option>
+                  <Select.Option value="Norwegian">Norwegian Cruise Line</Select.Option>
+                </Select>
+              </Form.Item>
+              <Form.Item label="From Port" name="from" required>
+                <Input placeholder="Departure port" />
+              </Form.Item>
+              <Form.Item label="To Port" name="to" required>
+                <Input placeholder="Destination port" />
+              </Form.Item>
+              <Form.Item label="Duration (nights)" name="duration" required>
+                <InputNumber min={1} max={30} className="w-full" />
+              </Form.Item>
+              <Form.Item label="Price per Person" name="price" required>
+                <InputNumber 
+                  min={1000} 
+                  className="w-full" 
+                  formatter={value => `₹ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} 
+                />
+              </Form.Item>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Form.Item label="Hotel Name" name="name" required>
+                <Input placeholder="Enter hotel name" />
+              </Form.Item>
+              <Form.Item label="Location" name="location" required>
+                <Input placeholder="City, State" />
+              </Form.Item>
+              <Form.Item label="Star Rating" name="starRating" required>
+                <Select placeholder="Select star rating">
+                  <Select.Option value={3}>3 Stars</Select.Option>
+                  <Select.Option value={4}>4 Stars</Select.Option>
+                  <Select.Option value={5}>5 Stars</Select.Option>
+                </Select>
+              </Form.Item>
+              <Form.Item label="Price per Night" name="price" required>
+                <InputNumber 
+                  min={1000} 
+                  className="w-full" 
+                  formatter={value => `₹ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} 
+                />
+              </Form.Item>
+            </div>
+          )}
+          
+          <Form.Item label="Description" name="description" required>
+            <Input.TextArea rows={3} placeholder="Enter description" />
+          </Form.Item>
+          
+          <div className="flex justify-end gap-2">
+            <Button onClick={() => setShowInventoryModal(false)}>Cancel</Button>
+            <Button type="primary" htmlType="submit">
+              Add {inventoryType === 'cruise' ? 'Cruise' : 'Hotel'}
+            </Button>
+          </div>
+        </Form>
+      </Modal>
+
+      {/* Offer Creation Modal */}
+      <Modal
+        title="Create New Offer"
+        open={showOfferModal}
+        onCancel={() => setShowOfferModal(false)}
+        footer={null}
+        width={600}
+      >
+        <Form layout="vertical" onFinish={(values) => {
+          console.log('Creating new offer:', values);
+          showSuccess(
+            'Offer Created',
+            'New offer has been created and assigned to selected agents.'
+          );
+          setShowOfferModal(false);
+        }}>
+          <Form.Item label="Offer Title" name="title" required>
+            <Input placeholder="Enter offer title" />
+          </Form.Item>
+          <Form.Item label="Description" name="description" required>
+            <Input.TextArea rows={3} placeholder="Enter offer description" />
+          </Form.Item>
+          <div className="grid grid-cols-2 gap-4">
+            <Form.Item label="Discount Type" name="discountType" required>
+              <Select placeholder="Select discount type">
+                <Select.Option value="Percentage">Percentage</Select.Option>
+                <Select.Option value="Fixed Amount">Fixed Amount</Select.Option>
+              </Select>
+            </Form.Item>
+            <Form.Item label="Discount Value" name="discountValue" required>
+              <InputNumber min={1} className="w-full" />
+            </Form.Item>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Form.Item label="Valid From" name="validFrom" required>
+              <DatePicker className="w-full" />
+            </Form.Item>
+            <Form.Item label="Valid To" name="validTo" required>
+              <DatePicker className="w-full" />
+            </Form.Item>
+          </div>
+          <Form.Item label="Applicable For" name="applicableFor" required>
+            <Select placeholder="Select service type">
+              <Select.Option value="Cruises">Cruises Only</Select.Option>
+              <Select.Option value="Hotels">Hotels Only</Select.Option>
+              <Select.Option value="Both">Both Services</Select.Option>
+            </Select>
+          </Form.Item>
+          
+          <div className="flex justify-end gap-2">
+            <Button onClick={() => setShowOfferModal(false)}>Cancel</Button>
+            <Button type="primary" htmlType="submit">
+              Create Offer
+            </Button>
+          </div>
+        </Form>
       </Modal>
     </div>
   );

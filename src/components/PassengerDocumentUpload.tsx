@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Upload, Calendar, AlertTriangle, CheckCircle, FileText, Camera } from 'lucide-react';
+import { validatePassportExpiry, validatePassportNumber, validateDateOfBirth, formatRemainingValidity } from '../utils/passportValidator';
 import type { PassengerDocument, Passenger } from '../types/booking';
 
 interface PassengerDocumentUploadProps {
@@ -25,30 +26,33 @@ const PassengerDocumentUpload: React.FC<PassengerDocumentUploadProps> = ({
     }
   );
 
-  // Calculate remaining validity and eligibility
-  const calculateValidity = (expiryDate: string) => {
-    if (!expiryDate) return { months: 0, eligible: false };
-    
-    const expiry = new Date(expiryDate);
-    const now = new Date();
-    const diffTime = expiry.getTime() - now.getTime();
-    const diffMonths = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 30));
-    
-    return {
-      months: Math.max(0, diffMonths),
-      eligible: diffMonths >= 6 // Must have at least 6 months validity
-    };
-  };
 
   const handleFieldChange = (field: keyof PassengerDocument, value: string | File) => {
     const updatedDocument = { ...document, [field]: value };
     
-    // Auto-calculate validity when expiry date changes
+    // Auto-validate when expiry date or passport number changes
     if (field === 'expiryDate' && typeof value === 'string') {
-      const validity = calculateValidity(value);
-      updatedDocument.remainingValidity = validity.months;
-      updatedDocument.isEligible = validity.eligible;
-      updatedDocument.renewalRequired = validity.months < 6;
+      const validation = validatePassportExpiry(value);
+      updatedDocument.remainingValidity = validation.remainingMonths;
+      updatedDocument.isEligible = validation.isValid;
+      updatedDocument.renewalRequired = validation.renewalRequired;
+    }
+    
+    if (field === 'passportNumber' && typeof value === 'string') {
+      // Validate passport number format
+      const isValidFormat = validatePassportNumber(value);
+      if (!isValidFormat && value.length > 0) {
+        alert('Invalid passport number format. Please enter a valid passport number.');
+        return;
+      }
+    }
+    
+    if (field === 'dateOfBirth' && typeof value === 'string') {
+      const dobValidation = validateDateOfBirth(value, updatedDocument.dateOfBirth);
+      if (!dobValidation.isValid && value.length > 0) {
+        alert(dobValidation.error);
+        return;
+      }
     }
     
     setDocument(updatedDocument);
@@ -56,6 +60,18 @@ const PassengerDocumentUpload: React.FC<PassengerDocumentUploadProps> = ({
   };
 
   const handleFileUpload = (field: 'frontImage' | 'backImage', file: File) => {
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload a valid image file.');
+      return;
+    }
+    
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size must be less than 5MB.');
+      return;
+    }
+    
     // In production, this would upload to cloud storage
     const fileUrl = URL.createObjectURL(file);
     handleFieldChange(field, fileUrl);
@@ -96,8 +112,12 @@ const PassengerDocumentUpload: React.FC<PassengerDocumentUploadProps> = ({
               onChange={(e) => handleFieldChange('passportNumber', e.target.value.toUpperCase())}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Enter passport number"
+              maxLength={9}
               required
             />
+            {document.passportNumber && !validatePassportNumber(document.passportNumber) && (
+              <p className="text-red-600 text-xs mt-1">Invalid passport number format</p>
+            )}
           </div>
 
           {/* Issue Date */}
@@ -110,6 +130,7 @@ const PassengerDocumentUpload: React.FC<PassengerDocumentUploadProps> = ({
               value={document.issueDate}
               onChange={(e) => handleFieldChange('issueDate', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              max={new Date().toISOString().split('T')[0]}
               required
             />
           </div>
@@ -124,6 +145,7 @@ const PassengerDocumentUpload: React.FC<PassengerDocumentUploadProps> = ({
               value={document.expiryDate}
               onChange={(e) => handleFieldChange('expiryDate', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              min={new Date().toISOString().split('T')[0]}
               required
             />
           </div>
@@ -138,6 +160,7 @@ const PassengerDocumentUpload: React.FC<PassengerDocumentUploadProps> = ({
               value={document.dateOfBirth}
               onChange={(e) => handleFieldChange('dateOfBirth', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              max={new Date().toISOString().split('T')[0]}
               required
             />
           </div>
@@ -169,9 +192,10 @@ const PassengerDocumentUpload: React.FC<PassengerDocumentUploadProps> = ({
                 <label className="cursor-pointer">
                   <Camera size={32} className="mx-auto text-gray-400 mb-2" />
                   <p className="text-sm text-gray-600">Upload passport front page</p>
+                  <p className="text-xs text-gray-500 mt-1">Max size: 5MB, Format: JPG, PNG</p>
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/jpg"
                     onChange={(e) => e.target.files?.[0] && handleFileUpload('frontImage', e.target.files[0])}
                     className="hidden"
                   />
@@ -204,9 +228,10 @@ const PassengerDocumentUpload: React.FC<PassengerDocumentUploadProps> = ({
                 <label className="cursor-pointer">
                   <Camera size={32} className="mx-auto text-gray-400 mb-2" />
                   <p className="text-sm text-gray-600">Upload passport back page</p>
+                  <p className="text-xs text-gray-500 mt-1">Max size: 5MB, Format: JPG, PNG</p>
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/jpg"
                     onChange={(e) => e.target.files?.[0] && handleFileUpload('backImage', e.target.files[0])}
                     className="hidden"
                   />
@@ -225,13 +250,51 @@ const PassengerDocumentUpload: React.FC<PassengerDocumentUploadProps> = ({
             <span className="font-medium">Passport Status: {validityStatus.text}</span>
           </div>
           <div className="text-sm">
-            <p>Remaining validity: {document.remainingValidity} months</p>
+            <p>Remaining validity: {formatRemainingValidity(document.remainingValidity)}</p>
             {document.renewalRequired && (
               <p className="font-medium">⚠️ Passport renewal required before travel</p>
+            )}
+            {document.isEligible && (
+              <p className="text-green-600 font-medium">✅ Eligible for travel</p>
             )}
           </div>
         </div>
       )}
+      
+      {/* Validation Summary */}
+      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <h4 className="font-medium text-blue-800 mb-2">Document Checklist:</h4>
+        <div className="space-y-1 text-sm">
+          <div className="flex items-center gap-2">
+            {document.passportNumber && validatePassportNumber(document.passportNumber) ? 
+              <CheckCircle size={14} className="text-green-600" /> : 
+              <AlertTriangle size={14} className="text-red-600" />
+            }
+            <span>Valid passport number</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {document.frontImage ? 
+              <CheckCircle size={14} className="text-green-600" /> : 
+              <AlertTriangle size={14} className="text-red-600" />
+            }
+            <span>Passport front page uploaded</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {document.backImage ? 
+              <CheckCircle size={14} className="text-green-600" /> : 
+              <AlertTriangle size={14} className="text-red-600" />
+            }
+            <span>Passport back page uploaded</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {document.isEligible ? 
+              <CheckCircle size={14} className="text-green-600" /> : 
+              <AlertTriangle size={14} className="text-red-600" />
+            }
+            <span>Minimum 6 months validity</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

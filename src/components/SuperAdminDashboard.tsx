@@ -28,7 +28,8 @@ import {
   Star,
   Ship,
   Building,
-  Plane
+  Plane,
+  Download
 } from "lucide-react";
 import {
   Table,
@@ -70,8 +71,12 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   
   const [activeTab, setActiveTab] = useState("overview");
   const [showCruiseModal, setShowCruiseModal] = useState(false);
+  const [showUserModal, setShowUserModal] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [showCorporateModal, setShowCorporateModal] = useState(false);
+  const [showBlogModal, setShowBlogModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [editingUser, setEditingUser] = useState<any>(null);
   
   // Combine all data
   const allAgents = [...agents, ...additionalAgents];
@@ -79,6 +84,19 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   const allOffers = [...offers, ...additionalOffers];
   const allBookings = [...bookings, ...additionalBookings];
   
+  // Mock corporate accounts data
+  const corporateAccounts = [
+    { id: 'corp1', name: 'TechCorp Solutions', bookings: 45, revenue: 2500000, status: 'Active' },
+    { id: 'corp2', name: 'Global Industries', bookings: 32, revenue: 1800000, status: 'Active' },
+    { id: 'corp3', name: 'StartUp Hub', bookings: 18, revenue: 950000, status: 'Pending' }
+  ];
+
+  // Mock blog posts data
+  const blogPosts = [
+    { id: 'blog1', title: 'Top 10 Cruise Destinations 2024', status: 'Published', views: 15420 },
+    { id: 'blog2', title: 'Luxury Hotel Guide: Mumbai Edition', status: 'Draft', views: 0 },
+    { id: 'blog3', title: 'Travel Tips for First-Time Cruisers', status: 'Published', views: 8930 }
+  ];
   // Handle cruise management
   const handleManageCruise = (action: string, cruiseId?: string) => {
     switch (action) {
@@ -99,6 +117,64 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
     }
   };
   
+  // Handle user management
+  const handleUserManagement = (action: string, userId?: string) => {
+    switch (action) {
+      case 'add':
+        setEditingUser(null);
+        setShowUserModal(true);
+        break;
+      case 'edit':
+        const user = [...allAgents, ...basicAdmins].find(u => u.id === userId);
+        setEditingUser(user);
+        setShowUserModal(true);
+        break;
+      case 'suspend':
+        if (window.confirm('Are you sure you want to suspend this user?')) {
+          showSuccess('User Suspended', 'User has been suspended successfully');
+        }
+        break;
+      case 'activate':
+        showSuccess('User Activated', 'User has been activated successfully');
+        break;
+    }
+  };
+
+  // Handle corporate account management
+  const handleCorporateAction = (action: string, accountId?: string) => {
+    switch (action) {
+      case 'add':
+        setShowCorporateModal(true);
+        break;
+      case 'view':
+        showInfo('Corporate Account', `Viewing details for account: ${accountId}`);
+        break;
+      case 'contract':
+        showInfo('Contract Management', 'Contract management would open here');
+        break;
+    }
+  };
+
+  // Handle blog management
+  const handleBlogAction = (action: string, postId?: string) => {
+    switch (action) {
+      case 'add':
+        setShowBlogModal(true);
+        break;
+      case 'edit':
+        showInfo('Edit Post', `Editing blog post: ${postId}`);
+        break;
+      case 'publish':
+        showSuccess('Post Published', 'Blog post has been published successfully');
+        break;
+      case 'delete':
+        if (window.confirm('Are you sure you want to delete this post?')) {
+          showSuccess('Post Deleted', 'Blog post has been deleted');
+        }
+        break;
+    }
+  };
+
   // Handle permission management
   const handlePermissionChange = (userId: string, permission: string, granted: boolean) => {
     console.log('Permission change:', userId, permission, granted);
@@ -387,6 +463,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
                   <Button type="primary" icon={<Plus />}>
                     Add User
                   </Button>
+                    onClick={() => handleUserManagement('add')}
                   <Button icon={<Download />}>
                     Export Users
                   </Button>
@@ -510,7 +587,10 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
                   <Button type="primary" icon={<Plus />} onClick={() => handleManageCruise('add')}>
                     Add Cruise
                   </Button>
-                  <Button icon={<Download />}>
+                  <Button 
+                    icon={<Download />}
+                    onClick={() => showInfo('Export', 'User data export would be generated here')}
+                  >
                     Export Inventory
                   </Button>
                 </div>
@@ -546,13 +626,23 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
                 <div className="space-y-3">
                   {[
                     { type: 'cruise', name: 'Royal Caribbean Explorer', action: 'Updated pricing', time: '2 hours ago' },
+                          <Button 
+                            size="small" 
+                            onClick={() => handleUserManagement('edit', record.id)}
+                          >
+                            Edit
+                          </Button>
                     { type: 'hotel', name: 'The Oberoi Mumbai', action: 'Added new room type', time: '4 hours ago' },
                     { type: 'cruise', name: 'Celebrity Infinity', action: 'Extended booking period', time: '1 day ago' }
                   ].map((item, index) => (
                     <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center gap-3">
                         {item.type === 'cruise' ? <Ship size={16} className="text-blue-500" /> : <Building size={16} className="text-purple-500" />}
-                        <div>
+                          <Button 
+                            size="small" 
+                            danger
+                            onClick={() => handleUserManagement('suspend', record.id)}
+                          >
                           <div className="font-medium">{item.name}</div>
                           <div className="text-sm text-gray-600">{item.action}</div>
                         </div>
@@ -569,7 +659,10 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
           {activeTab === 'permissions' && (
             <div>
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold">Permission Management</h2>
+                  <Button 
+                    icon={<Download />}
+                    onClick={() => showInfo('Export', 'Inventory export would be generated here')}
+                  >
                 <Button type="primary" icon={<Plus />}>
                   Create Role
                 </Button>
@@ -641,24 +734,36 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
                 </Card>
                 
                 {/* Customer Satisfaction */}
-                <Card title="Customer Satisfaction">
+                      <div key={index} className="space-y-2">
                   <div className="text-center mb-4">
                     <div className="text-4xl font-bold text-green-600 mb-2">4.8</div>
-                    <Rate disabled defaultValue={5} className="text-yellow-400" />
+                  <Button 
+                    type="link" 
+                    onClick={() => showInfo('Cruise Management', 'Cruise management interface would open here')}
+                        </div>
+                        <Progress percent={item.percentage} strokeColor="#10b981" />
+                      </div>
+                  >
                     <p className="text-gray-600 mt-2">Based on 1,247 reviews</p>
                         <Progress percent={item.percentage} strokeColor="#10b981" />
                   <div className="space-y-2">
                     {[5, 4, 3, 2, 1].map(rating => (
                       <div key={rating} className="flex items-center gap-2">
                         <span className="w-3 text-sm">{rating}</span>
-                        <Star size={12} className="text-yellow-400 fill-current" />
+                  <Button 
+                    type="link"
+                    onClick={() => showInfo('Hotel Management', 'Hotel management interface would open here')}
+                  </div>
                         <Progress 
                           percent={rating === 5 ? 78 : rating === 4 ? 15 : rating === 3 ? 5 : rating === 2 ? 1 : 1} 
                           size="small" 
                           strokeColor="#fbbf24"
                           className="flex-1"
                         />
-                      </div>
+                  <Button 
+                    type="link"
+                    onClick={() => showInfo('Flight Management', 'Flight management interface would open here')}
+                  >
                     ))}
                   </div>
                 </Card>
@@ -673,12 +778,97 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
               <div className="text-center py-12 text-gray-500">
                 <Award size={48} className="mx-auto mb-4 opacity-50" />
                 <p>Corporate account management features coming soon</p>
+                <Button 
+                  type="primary" 
+                  icon={<Plus />}
+                  onClick={() => handleCorporateAction('add')}
+                >
+                  Add Corporate Account
+                </Button>
               </div>
-            </div>
-          )}
-          
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <Card>
+                  <Statistic
+                    title="Total Accounts"
+                    value={corporateAccounts.length}
+                    prefix={<Award className="text-blue-500" size={20} />}
+                  />
+                </Card>
+                <Card>
+                  <Statistic
+                    title="Active Accounts"
+                    value={corporateAccounts.filter(acc => acc.status === 'Active').length}
+                    prefix={<CheckCircle className="text-green-500" size={20} />}
+                  />
+                </Card>
+                <Card>
+                  <Statistic
+                    title="Corporate Revenue"
+                    value={corporateAccounts.reduce((sum, acc) => sum + acc.revenue, 0)}
+                    formatter={(value) => `₹${Number(value).toLocaleString('en-IN')}`}
+                    prefix={<DollarSign className="text-purple-500" size={20} />}
+                  />
+                </Card>
+              </div>
+              
+              <Card title="Corporate Accounts">
+                <Table
+                  dataSource={corporateAccounts}
+                  columns={[
+                    {
+                      title: 'Company Name',
+                      dataIndex: 'name',
+                      key: 'name'
+                    },
+                    {
+                      title: 'Total Bookings',
+                      dataIndex: 'bookings',
+                      key: 'bookings'
+                    },
+                    {
+                      title: 'Revenue',
+                      dataIndex: 'revenue',
+                      key: 'revenue',
+                      render: (amount: number) => `₹${amount.toLocaleString('en-IN')}`
+                    },
+                    {
+                      title: 'Status',
+                      dataIndex: 'status',
+                      key: 'status',
+                      render: (status: string) => (
+                        <Tag color={status === 'Active' ? 'green' : 'orange'}>
+                          {status}
+                        </Tag>
+                      )
+                    },
+                    {
+                      title: 'Actions',
+                      key: 'actions',
+                      render: (record: any) => (
+                        <div className="flex gap-2">
+                          <Button 
+                            size="small"
+                            onClick={() => handleCorporateAction('view', record.id)}
+                          >
+                            View
+                          </Button>
+                          <Button 
+                            size="small" 
+                            type="primary"
+                            onClick={() => handleCorporateAction('contract', record.id)}
+                          >
+                            Contract
+                          </Button>
+                        </div>
+                      )
+                    }
+                  ]}
+                  rowKey="id"
+                  pagination={{ pageSize: 10 }}
+                />
+              </Card>
           {/* Blog Tab */}
-          {activeTab === 'blog' && (
             <div>
               <h2 className="text-2xl font-bold mb-6">Content Management</h2>
               <div className="text-center py-12 text-gray-500">
@@ -686,27 +876,179 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
                 <p>Blog and content management features coming soon</p>
               </div>
             </div>
+                <Button 
+                  type="primary" 
+                  icon={<Plus />}
+                  onClick={() => handleBlogAction('add')}
+                >
+                  Create Post
+                </Button>
           )}
-          
-          {/* Social Tab */}
-          {activeTab === 'social' && (
+              
+              <Card title="Blog Posts">
+                <Table
+                  dataSource={blogPosts}
+                  columns={[
+                    {
+                      title: 'Title',
+                      dataIndex: 'title',
+                      key: 'title'
+                    },
+                    {
+                      title: 'Status',
+                      dataIndex: 'status',
+                      key: 'status',
+                      render: (status: string) => (
+                        <Tag color={status === 'Published' ? 'green' : 'orange'}>
+                          {status}
+                        </Tag>
+                      )
+                    },
+                    {
+                      title: 'Views',
+                      dataIndex: 'views',
+                      key: 'views',
+                      render: (views: number) => views.toLocaleString()
+                    },
+                    {
+                      title: 'Actions',
+                      key: 'actions',
+                      render: (record: any) => (
+                        <div className="flex gap-2">
+                          <Button 
+                            size="small"
+                            onClick={() => handleBlogAction('edit', record.id)}
+                          >
+                            Edit
+                          </Button>
+                          {record.status === 'Draft' && (
+                            <Button 
+                              size="small" 
+                              type="primary"
+                              onClick={() => handleBlogAction('publish', record.id)}
+                            >
+                              Publish
+                            </Button>
+                          )}
+                          <Button 
+                            size="small" 
+                            danger
+                            onClick={() => handleBlogAction('delete', record.id)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      )
+                    }
+                  ]}
+                  rowKey="id"
+                  pagination={{ pageSize: 10 }}
+                />
+              </Card>
             <div>
-              <h2 className="text-2xl font-bold mb-6">Social Media Management</h2>
               <div className="text-center py-12 text-gray-500">
                 <Globe size={48} className="mx-auto mb-4 opacity-50" />
                 <p>Social media management features coming soon</p>
               </div>
             </div>
           )}
-        </div>
-      </div>
-      
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <Card className="text-center">
+                  <div className="text-2xl font-bold text-blue-600 mb-2">12.5K</div>
+                  <div className="text-sm text-gray-600">Facebook Followers</div>
+                </Card>
+                <Card className="text-center">
+                  <div className="text-2xl font-bold text-pink-600 mb-2">8.3K</div>
+                  <div className="text-sm text-gray-600">Instagram Followers</div>
+                </Card>
+                <Card className="text-center">
+                  <div className="text-2xl font-bold text-blue-400 mb-2">5.1K</div>
+                  <div className="text-sm text-gray-600">Twitter Followers</div>
+                </Card>
+                <Card className="text-center">
+                  <div className="text-2xl font-bold text-red-600 mb-2">15.2K</div>
+                  <div className="text-sm text-gray-600">YouTube Subscribers</div>
+                </Card>
+              </div>
+              
+              <Card title="Recent Social Media Activity">
+                <div className="space-y-3">
+                  {[
+                    { platform: 'Instagram', post: 'Luxury cruise to Maldives', engagement: '1.2K likes', time: '2 hours ago' },
+                    { platform: 'Facebook', post: 'Hotel booking special offer', engagement: '856 likes', time: '5 hours ago' },
+                    { platform: 'Twitter', post: 'Customer testimonial thread', engagement: '234 retweets', time: '1 day ago' }
+                  ].map((item, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Globe size={16} className="text-blue-500" />
+                        <div>
+                          <div className="font-medium">{item.platform}: {item.post}</div>
+                          <div className="text-sm text-gray-600">{item.engagement}</div>
+                        </div>
+                      </div>
+                      <div className="text-sm text-gray-500">{item.time}</div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
       {/* Cruise Management Modal */}
-      <Modal
         title="Add New Cruise"
         open={showCruiseModal}
         onCancel={() => setShowCruiseModal(false)}
         footer={null}
+      {/* User Management Modal */}
+      <Modal
+        title={editingUser ? "Edit User" : "Add New User"}
+        open={showUserModal}
+        onCancel={() => {
+          setShowUserModal(false);
+          setEditingUser(null);
+        }}
+        footer={null}
+        width={600}
+      >
+        <Form
+          layout="vertical"
+          initialValues={editingUser || {}}
+          onFinish={(values) => {
+            console.log('User form submitted:', values);
+            showSuccess(
+              editingUser ? 'User Updated' : 'User Created',
+              `User has been ${editingUser ? 'updated' : 'created'} successfully.`
+            );
+            setShowUserModal(false);
+            setEditingUser(null);
+          }}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Form.Item label="Full Name" name="name" required>
+              <Input placeholder="Enter full name" />
+            </Form.Item>
+            <Form.Item label="Email" name="email" required>
+              <Input type="email" placeholder="Enter email address" />
+            </Form.Item>
+            <Form.Item label="Role" name="role" required>
+              <Select placeholder="Select role">
+                <Select.Option value="Travel Agent">Travel Agent</Select.Option>
+                <Select.Option value="Basic Admin">Basic Admin</Select.Option>
+                <Select.Option value="Super Admin">Super Admin</Select.Option>
+              </Select>
+            </Form.Item>
+            <Form.Item label="Region/Team" name="region" required>
+              <Input placeholder="Enter region or team" />
+            </Form.Item>
+          </div>
+          
+          <div className="flex justify-end gap-2">
+            <Button onClick={() => setShowUserModal(false)}>Cancel</Button>
+            <Button type="primary" htmlType="submit">
+              {editingUser ? 'Update User' : 'Create User'}
+            </Button>
+          </div>
+        </Form>
+      </Modal>
+
         width={800}
       >
         <Form layout="vertical">
@@ -715,7 +1057,14 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
               <Input placeholder="Enter cruise name" />
             </Form.Item>
             <Form.Item label="Cruise Line" required>
-              <Select placeholder="Select cruise line">
+        <Form 
+          layout="vertical"
+          onFinish={(values) => {
+            console.log('Cruise form submitted:', values);
+            showSuccess('Cruise Added', 'New cruise has been added to inventory successfully.');
+            setShowCruiseModal(false);
+          }}
+        >
                 <Select.Option value="Royal Caribbean">Royal Caribbean</Select.Option>
                 <Select.Option value="Celebrity">Celebrity Cruises</Select.Option>
                 <Select.Option value="Norwegian">Norwegian Cruise Line</Select.Option>
@@ -743,18 +1092,109 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
               setShowCruiseModal(false);
               showSuccess('Cruise Added', 'New cruise has been added to inventory successfully.');
             }}>
+          <Form.Item label="Hold Period (days)" required>
+            <Select placeholder="Select hold period based on duration">
+              <Select.Option value={1}>1 day (for 7-day cruises)</Select.Option>
+              <Select.Option value={2}>2 days (for 15-day cruises)</Select.Option>
+              <Select.Option value={3}>3 days (for longer cruises)</Select.Option>
+            </Select>
+          </Form.Item>
               Add Cruise
             </Button>
-          </div>
-        </Form>
-      </Modal>
-      
+            <Button type="primary" htmlType="submit">
       {/* Permission Management Modal */}
       <Modal
         title="Manage User Permissions"
         open={showPermissionModal}
         onCancel={() => setShowPermissionModal(false)}
         footer={null}
+      {/* Corporate Account Modal */}
+      <Modal
+        title="Add Corporate Account"
+        open={showCorporateModal}
+        onCancel={() => setShowCorporateModal(false)}
+        footer={null}
+        width={600}
+      >
+        <Form 
+          layout="vertical"
+          onFinish={(values) => {
+            console.log('Corporate account form submitted:', values);
+            showSuccess('Corporate Account Added', 'New corporate account has been created successfully.');
+            setShowCorporateModal(false);
+          }}
+        >
+          <Form.Item label="Company Name" name="companyName" required>
+            <Input placeholder="Enter company name" />
+          </Form.Item>
+          <Form.Item label="Contact Person" name="contactPerson" required>
+            <Input placeholder="Enter contact person name" />
+          </Form.Item>
+          <div className="grid grid-cols-2 gap-4">
+            <Form.Item label="Email" name="email" required>
+              <Input type="email" placeholder="Enter email" />
+            </Form.Item>
+            <Form.Item label="Phone" name="phone" required>
+              <Input placeholder="Enter phone number" />
+            </Form.Item>
+          </div>
+          <Form.Item label="Billing Address" name="address" required>
+            <Input.TextArea rows={3} placeholder="Enter billing address" />
+          </Form.Item>
+          
+          <div className="flex justify-end gap-2">
+            <Button onClick={() => setShowCorporateModal(false)}>Cancel</Button>
+            <Button type="primary" htmlType="submit">
+              Create Account
+            </Button>
+          </div>
+        </Form>
+      </Modal>
+
+      {/* Blog Post Modal */}
+      <Modal
+        title="Create Blog Post"
+        open={showBlogModal}
+        onCancel={() => setShowBlogModal(false)}
+        footer={null}
+        width={800}
+      >
+        <Form 
+          layout="vertical"
+          onFinish={(values) => {
+            console.log('Blog post form submitted:', values);
+            showSuccess('Blog Post Created', 'New blog post has been created successfully.');
+            setShowBlogModal(false);
+          }}
+        >
+          <Form.Item label="Post Title" name="title" required>
+            <Input placeholder="Enter blog post title" />
+          </Form.Item>
+          <Form.Item label="Category" name="category" required>
+            <Select placeholder="Select category">
+              <Select.Option value="Travel Tips">Travel Tips</Select.Option>
+              <Select.Option value="Destinations">Destinations</Select.Option>
+              <Select.Option value="Cruise Guides">Cruise Guides</Select.Option>
+              <Select.Option value="Hotel Reviews">Hotel Reviews</Select.Option>
+            </Select>
+          </Form.Item>
+          <Form.Item label="Content" name="content" required>
+            <Input.TextArea rows={8} placeholder="Enter blog post content" />
+          </Form.Item>
+          <Form.Item label="Tags" name="tags">
+            <Input placeholder="Enter tags separated by commas" />
+          </Form.Item>
+          
+          <div className="flex justify-end gap-2">
+            <Button onClick={() => setShowBlogModal(false)}>Cancel</Button>
+            <Button htmlType="submit">Save as Draft</Button>
+            <Button type="primary" htmlType="submit">
+              Publish Post
+            </Button>
+          </div>
+        </Form>
+      </Modal>
+
         width={600}
       >
         {selectedUser && (
@@ -785,15 +1225,18 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
                 setShowPermissionModal(false);
                 showSuccess('Permissions Updated', 'User permissions have been updated successfully.');
               }}>
-                Save Changes
+                <Button 
+                  type="primary" 
+                  icon={<Plus />}
+                  onClick={() => showInfo('Create Role', 'Role creation interface would open here')}
+                >
               </Button>
             </div>
         )}
       </Modal>
+          </div>
         </div>
       </div>
-    </div>
-  );
 };
 
 export default SuperAdminDashboard;

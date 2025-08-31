@@ -26,11 +26,19 @@ interface AgentPortalProps {
 const AgentPortal: React.FC<AgentPortalProps> = ({ userRole, onLogout, onBack }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
+  const [editMode, setEditMode] = useState(false);
+  const [profileData, setProfileData] = useState({
+    fullName: 'John Smith',
+    email: 'agent@cruise.com',
+    phone: '+91 9876543210',
+    address: '123 Connaught Place, New Delhi',
+    region: 'Delhi'
+  });
 
   // Mock agent data - in real app this would come from API
   const agentData = {
-    fullName: 'John Smith',
-    email: 'agent@cruise.com',
+    fullName: profileData.fullName,
+    email: profileData.email,
     role: 'Agent',
     commissionRate: 5,
     status: 'Active',
@@ -60,6 +68,26 @@ const AgentPortal: React.FC<AgentPortalProps> = ({ userRole, onLogout, onBack })
   // Handle quick actions
   const handleQuickAction = (action: string) => {
     alert(`${action} functionality would be implemented here!`);
+  };
+
+  // Handle profile update
+  const handleProfileUpdate = () => {
+    if (editMode) {
+      // Save changes
+      console.log('Saving profile changes:', profileData);
+      alert('Profile updated successfully!');
+      setEditMode(false);
+    } else {
+      setEditMode(true);
+    }
+  };
+
+  // Handle profile field change
+  const handleProfileChange = (field: string, value: string) => {
+    setProfileData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   return (
@@ -131,7 +159,8 @@ const AgentPortal: React.FC<AgentPortalProps> = ({ userRole, onLogout, onBack })
           <div className="flex flex-wrap gap-2">
             {[
               { key: 'overview', label: 'Overview', icon: <BarChart3 size={18} /> },
-              { key: 'performance', label: 'Performance', icon: <TrendingUp size={18} /> }
+              { key: 'performance', label: 'Performance', icon: <TrendingUp size={18} /> },
+              { key: 'profile', label: 'Profile Management', icon: <User size={18} /> }
             ].map(tab => (
               <button
                 key={tab.key}
@@ -156,7 +185,10 @@ const AgentPortal: React.FC<AgentPortalProps> = ({ userRole, onLogout, onBack })
           <div className="bg-white/20 backdrop-blur-md rounded-2xl border border-white/30 shadow-lg p-8">
             <div className="flex justify-between items-start mb-6">
               <h3 className="text-xl font-bold text-gray-800">Profile Information</h3>
-              <button className="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors">
+              <button 
+                onClick={() => setActiveTab('profile')}
+                className="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors"
+              >
                 <Edit3 size={18} />
                 <span>Edit</span>
               </button>
@@ -295,11 +327,11 @@ const AgentPortal: React.FC<AgentPortalProps> = ({ userRole, onLogout, onBack })
               </button>
 
               <button
-                onClick={() => handleQuickAction('Commission History')}
+                onClick={() => setActiveTab('profile')}
                 className="w-full flex items-center gap-3 bg-purple-500 hover:bg-purple-600 text-white py-4 px-6 rounded-lg transition-colors duration-200 font-medium"
               >
-                <Award size={20} />
-                <span>Commission History</span>
+                <User size={20} />
+                <span>Manage Profile</span>
               </button>
             </div>
 
@@ -324,22 +356,20 @@ const AgentPortal: React.FC<AgentPortalProps> = ({ userRole, onLogout, onBack })
             <div className="bg-white/20 backdrop-blur-md rounded-2xl border border-white/30 shadow-lg p-6">
               <h3 className="text-lg font-bold text-gray-800 mb-4">Monthly Performance</h3>
               <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">March Bookings:</span>
-                  <span className="font-bold text-blue-600">12</span>
+                <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                  <div className="text-2xl font-bold text-blue-600">{agentData.totalBookings}</div>
+                  <div className="text-sm text-gray-600">Total Bookings</div>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Revenue Generated:</span>
-                  <span className="font-bold text-green-600">₹6,50,000</span>
+                
+                <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+                  <div className="text-2xl font-bold text-green-600">{agentData.confirmedBookings}</div>
+                  <div className="text-sm text-gray-600">Confirmed Bookings</div>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Commission Earned:</span>
-                  <span className="font-bold text-purple-600">₹32,500</span>
+                
+                <div className="bg-purple-50 rounded-xl p-4 border border-purple-200">
+                  <div className="text-2xl font-bold text-purple-600">{agentData.successRate}%</div>
+                  <div className="text-sm text-gray-600">Success Rate</div>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2 mt-4">
-                  <div className="bg-blue-500 h-2 rounded-full" style={{ width: '75%' }}></div>
-                </div>
-                <p className="text-sm text-gray-600 text-center">75% of monthly target achieved</p>
               </div>
             </div>
 
@@ -377,6 +407,122 @@ const AgentPortal: React.FC<AgentPortalProps> = ({ userRole, onLogout, onBack })
                   <TrendingUp className="text-purple-600" size={20} />
                   <span className="text-sm text-purple-800">Revenue Target Exceeded</span>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Profile Management Tab */}
+        {activeTab === 'profile' && (
+          <div className="max-w-2xl mx-auto">
+            <div className="bg-white/20 backdrop-blur-md rounded-2xl border border-white/30 shadow-lg p-8">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-gray-800">Profile Management</h3>
+                <button
+                  onClick={handleProfileUpdate}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                    editMode 
+                      ? 'bg-green-500 hover:bg-green-600 text-white' 
+                      : 'bg-blue-500 hover:bg-blue-600 text-white'
+                  }`}
+                >
+                  <Edit3 size={18} />
+                  <span>{editMode ? 'Save Changes' : 'Edit Profile'}</span>
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Profile Picture */}
+                <div className="text-center">
+                  <div className="w-24 h-24 bg-blue-500 rounded-full flex items-center justify-center text-white text-3xl font-bold mx-auto mb-4">
+                    {getInitials(profileData.fullName)}
+                  </div>
+                  {editMode && (
+                    <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                      Change Avatar
+                    </button>
+                  )}
+                </div>
+
+                {/* Profile Form */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                    {editMode ? (
+                      <input
+                        type="text"
+                        value={profileData.fullName}
+                        onChange={(e) => handleProfileChange('fullName', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    ) : (
+                      <p className="text-gray-900 py-2">{profileData.fullName}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                    {editMode ? (
+                      <input
+                        type="email"
+                        value={profileData.email}
+                        onChange={(e) => handleProfileChange('email', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    ) : (
+                      <p className="text-gray-900 py-2">{profileData.email}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                    {editMode ? (
+                      <input
+                        type="tel"
+                        value={profileData.phone}
+                        onChange={(e) => handleProfileChange('phone', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    ) : (
+                      <p className="text-gray-900 py-2">{profileData.phone}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Region</label>
+                    <p className="text-gray-900 py-2">{profileData.region}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                  {editMode ? (
+                    <textarea
+                      value={profileData.address}
+                      onChange={(e) => handleProfileChange('address', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-20"
+                    />
+                  ) : (
+                    <p className="text-gray-900 py-2">{profileData.address}</p>
+                  )}
+                </div>
+
+                {editMode && (
+                  <div className="flex justify-end gap-2 pt-4 border-t">
+                    <button
+                      onClick={() => setEditMode(false)}
+                      className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleProfileUpdate}
+                      className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors"
+                    >
+                      Save Changes
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

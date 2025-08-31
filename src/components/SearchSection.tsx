@@ -42,7 +42,7 @@ const SearchSection: React.FC<SearchSectionProps> = ({ filters, onFiltersChange 
           className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
         >
           <Search size={16} />
-          Search
+          Submit
         </button>
       </div>
       

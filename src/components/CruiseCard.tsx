@@ -80,11 +80,14 @@ const CruiseCard: React.FC<CruiseCardProps> = ({ cruise, onViewDetails, onCancel
 
             {/* Price Section */}
             <div className="text-right mt-4 sm:mt-0">
-              <div className="flex items-center justify-end gap-1 text-3xl font-bold text-green-600 mb-1">
-                <IndianRupee size={24} />
-                <span>{formatPrice(cruise.pricePerPerson)}</span>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <div className="text-sm text-green-700 font-medium mb-1">Rate (per person)</div>
+                <div className="flex items-center justify-end gap-1 text-2xl font-bold text-green-600">
+                  <IndianRupee size={20} />
+                  <span>{formatPrice(cruise.pricePerPerson)}</span>
+                </div>
+                <p className="text-xs text-green-600 mt-1">Base cabin rate</p>
               </div>
-              <p className="text-sm text-gray-500">per person</p>
             </div>
           </div>
 
@@ -103,16 +106,16 @@ const CruiseCard: React.FC<CruiseCardProps> = ({ cruise, onViewDetails, onCancel
               </div>
             </div>
 
-            {/* Room Types */}
+            {/* Cabin Categories */}
             <div>
               <div className="flex items-center gap-2 text-gray-600 mb-2">
                 <Users size={16} />
-                <span className="font-medium text-sm">Room Types Available:</span>
+                <span className="font-medium text-sm">Cabin Categories:</span>
               </div>
               <div className="flex flex-wrap gap-1">
-                {cruise.roomTypes.slice(0, 3).map((room, index) => (
+                {cruise.roomTypes.slice(0, 3).map((cabin, index) => (
                   <span key={index} className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
-                    {room}
+                    {cabin}
                   </span>
                 ))}
                 {cruise.roomTypes.length > 3 && (
